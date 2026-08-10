@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { GeoJSON, MapContainer, TileLayer, useMap } from "react-leaflet";
 import L from "leaflet";
 import type { Feature, Geometry } from "geojson";
@@ -61,8 +61,14 @@ export default function AssessmentMap({
     [evidence],
   );
   const findings = useMemo(() => evidence.filter((item) => item.kind === "finding"), [evidence]);
+  const [selectedId, setSelectedId] = useState<string | null>(null);
   const answeredSources = sources.filter((source) => source.status === "OK" || source.status === "STALE");
   const mappedSourceKeys = new Set(geometryEvidence.map((item) => item.sourceKey));
+  const selectedEvidence = geometryEvidence.find((item) => item.id === selectedId) ?? geometryEvidence[0] ?? null;
+
+  function selectEvidence(item: Evidence) {
+    setSelectedId(item.id);
+  }
 
   return (
     <div className="relative h-full w-full overflow-hidden rounded-xl border border-white/10 shadow-2xl">
@@ -92,7 +98,7 @@ export default function AssessmentMap({
                 fillOpacity: item.sourceKey === "reinfo" ? 0.42 : item.tier === "demo" ? 0.06 : 0.1,
                 dashArray: item.tier === "demo" ? "6 6" : undefined,
               }}
-              eventHandlers={{ click: () => onSelectEvidence?.(item) }}
+              eventHandlers={{ click: () => selectEvidence(item) }}
               onEachFeature={(_feature, layer) => {
                 layer.bindPopup(
                   `<div style="font-size:11px;line-height:1.5;max-width:280px">
@@ -133,7 +139,7 @@ export default function AssessmentMap({
         </div>
       </div>
 
-      <aside className="absolute bottom-4 right-4 top-4 z-[500] flex w-[360px] max-w-[calc(100%-2rem)] flex-col overflow-hidden rounded-lg border border-white/15 bg-[#070a13]/92 shadow-2xl backdrop-blur">
+      <aside className="absolute bottom-4 right-4 top-4 z-[500] flex w-[430px] max-w-[calc(100%-2rem)] flex-col overflow-hidden rounded-lg border border-white/15 bg-[#070a13]/92 shadow-2xl backdrop-blur">
         <div className="border-b border-white/10 px-4 py-3">
           <div className="flex items-center gap-2">
             <Layers className="h-4 w-4 text-blue-300" />
@@ -146,6 +152,8 @@ export default function AssessmentMap({
         </div>
 
         <div className="space-y-2 overflow-y-auto px-4 py-3">
+          <CategoryGuide activeKeys={mappedSourceKeys} />
+
           {sources.map((source) => {
             const sourceFindings = findings.filter((item) => item.sourceKey === source.sourceKey);
             const sourceGeometries = geometryEvidence.filter((item) => item.sourceKey === source.sourceKey);
@@ -205,8 +213,12 @@ export default function AssessmentMap({
                     <button
                       key={item.id}
                       type="button"
-                      onClick={() => onSelectEvidence?.(item)}
-                      className="w-full rounded-lg border border-white/10 bg-white/[0.03] p-3 text-left transition hover:border-blue-400/40 hover:bg-blue-500/10"
+                      onClick={() => selectEvidence(item)}
+                      className={`w-full rounded-lg border p-3 text-left transition ${
+                        selectedEvidence?.id === item.id
+                          ? "border-blue-400/60 bg-blue-500/15"
+                          : "border-white/10 bg-white/[0.03] hover:border-blue-400/40 hover:bg-blue-500/10"
+                      }`}
                     >
                       <p className="flex items-start gap-2 text-[11px] font-semibold text-white">
                         <span
@@ -230,6 +242,10 @@ export default function AssessmentMap({
               </div>
             )}
           </div>
+
+          {selectedEvidence ? (
+            <EvidenceDetail item={selectedEvidence} onOpenDrawer={() => onSelectEvidence?.(selectedEvidence)} />
+          ) : null}
         </div>
       </aside>
 
@@ -271,6 +287,162 @@ function MiniMetric({ label, value }: { label: string; value: string }) {
       <span className="font-bold text-gray-200">{value}</span>
     </div>
   );
+}
+
+function CategoryGuide({ activeKeys }: { activeKeys: Set<string> }) {
+  const rows = [
+    {
+      key: "ingemmet",
+      meaning: "Concesiones, petitorios, titulares, estado publicado y solape con el area.",
+    },
+    {
+      key: "sernanp",
+      meaning: "Areas naturales protegidas, categoria y restriccion ambiental preliminar.",
+    },
+    {
+      key: "reinfo",
+      meaning: "Coordenadas REINFO declaradas; exige verificacion final en portal MINEM.",
+    },
+    {
+      key: "ana",
+      meaning: "Cuencas, rios o unidades hidricas; contexto, no permiso de agua.",
+    },
+    {
+      key: "bdpi",
+      meaning: "Contexto territorial y comunidades para debida diligencia social.",
+    },
+    {
+      key: "copernicus",
+      meaning: "Metadatos satelitales disponibles; no simula imagen ni actividad.",
+    },
+  ];
+
+  return (
+    <section className="rounded-lg border border-blue-500/20 bg-blue-500/[0.06] p-3">
+      <p className="text-[10px] font-bold uppercase tracking-wider text-blue-200">
+        Como entender las categorias
+      </p>
+      <div className="mt-2 space-y-1.5">
+        {rows.map((row) => {
+          const sourceStyle = SOURCE_STYLE[row.key] ?? FALLBACK_STYLE;
+          return (
+            <p key={row.key} className="flex gap-2 text-[10px] leading-relaxed text-gray-400">
+              <span
+                className="mt-1 h-2 w-2 shrink-0 rounded-sm"
+                style={{ backgroundColor: activeKeys.has(row.key) ? sourceStyle.color : "#64748b" }}
+              />
+              <span>
+                <strong className="text-gray-200">{sourceStyle.label}:</strong> {row.meaning}
+              </span>
+            </p>
+          );
+        })}
+      </div>
+    </section>
+  );
+}
+
+function EvidenceDetail({ item, onOpenDrawer }: { item: Evidence; onOpenDrawer: () => void }) {
+  const sourceStyle = SOURCE_STYLE[item.sourceKey] ?? FALLBACK_STYLE;
+  const rows = metadataRows(item.metadata);
+
+  return (
+    <section className="rounded-lg border border-blue-400/30 bg-blue-500/[0.08] p-3">
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <p className="text-[10px] font-bold uppercase tracking-wider text-blue-200">
+            Detalle del hallazgo seleccionado
+          </p>
+          <h4 className="mt-1 text-xs font-bold text-white">{item.title}</h4>
+        </div>
+        <span
+          className="mt-1 h-3 w-3 shrink-0 rounded-sm"
+          style={{ backgroundColor: sourceStyle.color }}
+        />
+      </div>
+
+      <div className="mt-3 grid gap-2 sm:grid-cols-2">
+        <DetailFact label="Categoria" value={sourceStyle.label} />
+        <DetailFact label="Estado fuente" value={STATUS_LABELS[item.status]} />
+        <DetailFact label="Nivel" value={TIER_LABELS[item.tier]} />
+        <DetailFact label="Consultado" value={formatTimestamp(item.fetchedAt)} />
+        <DetailFact label="ID evidencia" value={item.id} mono />
+        <DetailFact label="Fuente" value={item.sourceName} />
+      </div>
+
+      {item.detail ? (
+        <p className="mt-3 rounded border border-white/10 bg-black/15 p-2.5 text-[11px] leading-relaxed text-gray-300">
+          {item.detail}
+        </p>
+      ) : null}
+
+      {rows.length > 0 ? (
+        <div className="mt-3">
+          <p className="mb-2 text-[10px] font-bold uppercase tracking-wider text-gray-500">
+            Campos leidos de la fuente
+          </p>
+          <div className="grid gap-2 sm:grid-cols-2">
+            {rows.slice(0, 10).map(([key, value]) => (
+              <DetailFact key={key} label={labelFor(key)} value={value} />
+            ))}
+          </div>
+        </div>
+      ) : null}
+
+      {item.ref ? (
+        <a
+          href={item.ref}
+          target="_blank"
+          rel="noreferrer noopener"
+          className="mt-3 inline-flex items-center gap-1 text-[11px] font-semibold text-blue-300 hover:text-blue-200"
+        >
+          Abrir fuente oficial
+          <ExternalLink className="h-3 w-3" />
+        </a>
+      ) : null}
+
+      <button
+        type="button"
+        onClick={onOpenDrawer}
+        className="mt-3 inline-flex items-center gap-1 rounded-lg border border-white/15 px-3 py-1.5 text-[11px] font-semibold text-gray-200 transition hover:bg-white/5"
+      >
+        Abrir ficha lateral
+        <ExternalLink className="h-3 w-3" />
+      </button>
+    </section>
+  );
+}
+
+function DetailFact({ label, value, mono = false }: { label: string; value: string; mono?: boolean }) {
+  return (
+    <div className="rounded border border-white/10 bg-black/15 px-2.5 py-2">
+      <p className="text-[9px] font-semibold uppercase tracking-wider text-gray-500">{label}</p>
+      <p className={`mt-1 break-words text-[11px] text-gray-200 ${mono ? "font-mono" : ""}`}>{value}</p>
+    </div>
+  );
+}
+
+function metadataRows(metadata: Record<string, unknown>): [string, string][] {
+  return Object.entries(metadata)
+    .filter(([, value]) => value != null && value !== "")
+    .map(([key, value]) => [key, String(value)] as [string, string]);
+}
+
+function labelFor(key: string): string {
+  const labels: Record<string, string> = {
+    code: "Codigo",
+    name: "Nombre",
+    status: "Estado",
+    holder: "Titular",
+    substance: "Sustancia",
+    declaredHectares: "Hectareas decl.",
+    overlapHectares: "Solape ha",
+    overlapPercentOfAoi: "Solape AOI",
+    category: "Categoria",
+    legalNorm: "Norma legal",
+    establishedAt: "Fecha",
+  };
+  return labels[key] ?? key;
 }
 
 function escapeHtml(value: string): string {

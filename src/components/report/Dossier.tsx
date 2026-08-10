@@ -3,6 +3,7 @@ import Link from "next/link";
 import type { Assessment, Project } from "@/types/assessment";
 import type { Evidence } from "@/types/evidence";
 import AoiSketch from "./AoiSketch";
+import DownloadReportButton from "./DownloadReportButton";
 import PrintButton from "./PrintButton";
 import { formatHectares, formatTimestamp, STATUS_LABELS, TIER_LABELS } from "@/lib/ui/format";
 
@@ -51,7 +52,10 @@ export default function Dossier({
         <Link href="/app" className="text-xs font-semibold text-blue-400 hover:text-blue-300">
           ← Volver al panel
         </Link>
-        <PrintButton assessmentId={assessment.id} />
+        <div className="flex flex-wrap items-center gap-2">
+          <DownloadReportButton assessmentId={assessment.id} />
+          <PrintButton assessmentId={assessment.id} />
+        </div>
       </nav>
 
       {assessment.demoMode ? (

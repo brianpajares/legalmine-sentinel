@@ -268,7 +268,7 @@ function ProjectHeader({
                 className="inline-flex items-center gap-1.5 rounded-lg bg-blue-600 px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-blue-500"
               >
                 <FileText className="h-3.5 w-3.5" />
-                Generate dossier
+                Ver / descargar informe
               </Link>
             </>
           ) : null}
