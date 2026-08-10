@@ -33,7 +33,7 @@ async function probeArcGisSource(key: "ingemmet" | "sernanp" | "ana" | "bdpi"): 
     docsUrl: definition.docsUrl,
   };
 
-  if (!config.layerUrl) {
+  if (config.layerUrls.length === 0) {
     return {
       ...shared,
       status: "NOT_CONFIGURED",
@@ -43,13 +43,20 @@ async function probeArcGisSource(key: "ingemmet" | "sernanp" | "ana" | "bdpi"): 
     };
   }
 
-  const probe = await probeArcGisLayer(config.layerUrl);
+  const probes = await Promise.all(config.layerUrls.map((layerUrl) => probeArcGisLayer(layerUrl)));
+  const ok = probes.every((probe) => probe.ok);
   return {
     ...shared,
-    status: probe.ok ? "OK" : "UNAVAILABLE",
-    lastSuccessfulFetch: probe.ok ? new Date().toISOString() : null,
+    status: ok ? "OK" : "UNAVAILABLE",
+    lastSuccessfulFetch: ok ? new Date().toISOString() : null,
     configured: true,
-    message: probe.message,
+    message:
+      probes.length === 1
+        ? probes[0].message
+        : `${probes.filter((probe) => probe.ok).length}/${probes.length} configured layer(s) reachable. ${probes
+            .filter((probe) => !probe.ok)
+            .map((probe) => probe.message)
+            .join(" ")}`,
   };
 }
 

@@ -11,11 +11,12 @@ GOOGLE_DRIVE_OWNER_EMAIL=brian.d.pajares@gmail.com
 GOOGLE_DRIVE_CLIENT_ID=...
 GOOGLE_DRIVE_CLIENT_SECRET=...
 GOOGLE_DRIVE_REFRESH_TOKEN=...
+GOOGLE_DRIVE_DB_FILE_ID=1GY2Wak6RbTNdbaOtvp79WnDX6gQ9FmDu
 GOOGLE_DRIVE_DB_FOLDER_NAME="LegalMine Sentinel Database"
 GOOGLE_DRIVE_DB_FILE_NAME=legalmine-sentinel-db.json
 ```
 
-`GOOGLE_DRIVE_DB_FOLDER_ID` is optional. If it is blank, the app creates or reuses a folder named `LegalMine Sentinel Database` in the authenticated account's Drive.
+`GOOGLE_DRIVE_DB_FILE_ID` points to the Drive JSON database already created for this app. If it is blank, `GOOGLE_DRIVE_DB_FOLDER_ID` is optional and the app creates or reuses a folder named `LegalMine Sentinel Database` in the authenticated account's Drive.
 
 If `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY` are also configured, Supabase is used instead of Drive because it handles concurrent writes better.
 

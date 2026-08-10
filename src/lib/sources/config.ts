@@ -98,9 +98,28 @@ function env(name: string): string | undefined {
   return value && value.trim() ? value.trim() : undefined;
 }
 
+function csvEnv(name: string): string[] | undefined {
+  const value = env(name);
+  if (!value) return undefined;
+  const items = value.split(",").map((item) => item.trim()).filter(Boolean);
+  return items.length > 0 ? items : undefined;
+}
+
+const DEFAULT_INGEMMET_LAYER_URL =
+  "https://geocatmin.ingemmet.gob.pe/arcgis/rest/services/SERV_CATASTRO_MINERO_WGS84/MapServer/0";
+
+const DEFAULT_SERNANP_LAYER_URLS = [
+  "https://geoservicios.sernanp.gob.pe/arcgis/rest/services/servicios_ogc/peru_sernanp_0102/MapServer/0",
+  "https://geoservicios.sernanp.gob.pe/arcgis/rest/services/servicios_ogc/peru_sernanp_0102/MapServer/1",
+  "https://geoservicios.sernanp.gob.pe/arcgis/rest/services/servicios_ogc/peru_sernanp_0102/MapServer/2",
+  "https://geoservicios.sernanp.gob.pe/arcgis/rest/services/servicios_ogc/peru_sernanp_0102/MapServer/3",
+  "https://geoservicios.sernanp.gob.pe/arcgis/rest/services/servicios_ogc/peru_sernanp_0214/MapServer/0",
+];
+
 export interface ArcGisLayerConfig {
   /** Full layer URL, e.g. .../MapServer/0 — the adapter appends /query. */
   layerUrl?: string;
+  layerUrls: string[];
   /** Set when the value came from an environment variable rather than a default. */
   fromEnv: boolean;
   /** Optional field mapping so a deployment can adapt to a renamed schema. */
@@ -110,37 +129,43 @@ export interface ArcGisLayerConfig {
 export const arcgisConfig = {
   get ingemmet(): ArcGisLayerConfig {
     const fromEnv = Boolean(env("INGEMMET_LAYER_URL"));
+    const layerUrl = env("INGEMMET_LAYER_URL") ?? DEFAULT_INGEMMET_LAYER_URL;
     return {
-      layerUrl: env("INGEMMET_LAYER_URL"),
+      layerUrl,
+      layerUrls: [layerUrl],
       fromEnv,
       fields: {
         code: env("INGEMMET_FIELD_CODE") ?? "CODIGOU",
         name: env("INGEMMET_FIELD_NAME") ?? "CONCESION",
-        status: env("INGEMMET_FIELD_STATUS") ?? "ESTADO",
-        holder: env("INGEMMET_FIELD_HOLDER") ?? "TITULAR",
+        status: env("INGEMMET_FIELD_STATUS") ?? "D_ESTADO",
+        holder: env("INGEMMET_FIELD_HOLDER") ?? "TIT_CONCES",
         substance: env("INGEMMET_FIELD_SUBSTANCE") ?? "SUSTANCIA",
-        hectares: env("INGEMMET_FIELD_HECTARES") ?? "HECTA",
+        hectares: env("INGEMMET_FIELD_HECTARES") ?? "HECTAGIS",
       },
     };
   },
   get sernanp(): ArcGisLayerConfig {
     const fromEnv = Boolean(env("SERNANP_LAYER_URL"));
+    const layerUrls = csvEnv("SERNANP_LAYER_URL") ?? DEFAULT_SERNANP_LAYER_URLS;
     return {
-      layerUrl: env("SERNANP_LAYER_URL"),
+      layerUrl: layerUrls[0],
+      layerUrls,
       fromEnv,
       fields: {
-        name: env("SERNANP_FIELD_NAME") ?? "ANP_NOMB",
-        category: env("SERNANP_FIELD_CATEGORY") ?? "ANP_CATEG",
+        name: env("SERNANP_FIELD_NAME") ?? "nombre",
+        category: env("SERNANP_FIELD_CATEGORY") ?? "categoria",
         legalNorm: env("SERNANP_FIELD_NORM") ?? "D_S",
         establishedAt: env("SERNANP_FIELD_DATE") ?? "FECHA",
       },
     };
   },
   get ana(): ArcGisLayerConfig {
-    return { layerUrl: env("ANA_LAYER_URL"), fromEnv: Boolean(env("ANA_LAYER_URL")), fields: {} };
+    const layerUrls = csvEnv("ANA_LAYER_URL") ?? [];
+    return { layerUrl: layerUrls[0], layerUrls, fromEnv: Boolean(env("ANA_LAYER_URL")), fields: {} };
   },
   get bdpi(): ArcGisLayerConfig {
-    return { layerUrl: env("BDPI_LAYER_URL"), fromEnv: Boolean(env("BDPI_LAYER_URL")), fields: {} };
+    const layerUrls = csvEnv("BDPI_LAYER_URL") ?? [];
+    return { layerUrl: layerUrls[0], layerUrls, fromEnv: Boolean(env("BDPI_LAYER_URL")), fields: {} };
   },
 };
 

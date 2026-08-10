@@ -73,6 +73,7 @@ export async function getStore(): Promise<Store> {
       clientId: process.env.GOOGLE_DRIVE_CLIENT_ID,
       clientSecret: process.env.GOOGLE_DRIVE_CLIENT_SECRET,
       refreshToken: process.env.GOOGLE_DRIVE_REFRESH_TOKEN,
+      fileId: process.env.GOOGLE_DRIVE_DB_FILE_ID,
       folderId: process.env.GOOGLE_DRIVE_DB_FOLDER_ID,
       folderName: process.env.GOOGLE_DRIVE_DB_FOLDER_NAME,
       fileName: process.env.GOOGLE_DRIVE_DB_FILE_NAME,

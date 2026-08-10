@@ -77,12 +77,12 @@ function normalizeGeoJsonGeometry(geometry: unknown): GeoGeometry | null {
   return null;
 }
 
-function buildQueryParams(geometry: GeoGeometry, outFields: string, maxRecords: number) {
+function buildQueryParams(geometry: GeoGeometry, outFields: string, maxRecords?: number) {
   const esriGeometry = {
     rings: toEsriRings(geometry),
     spatialReference: { wkid: 4326 },
   };
-  return {
+  const params = {
     where: "1=1",
     geometry: JSON.stringify(esriGeometry),
     geometryType: "esriGeometryPolygon",
@@ -91,9 +91,9 @@ function buildQueryParams(geometry: GeoGeometry, outFields: string, maxRecords: 
     outSR: "4326",
     outFields,
     returnGeometry: "true",
-    resultRecordCount: String(maxRecords),
     f: "geojson",
   } satisfies Record<string, string>;
+  return maxRecords ? { ...params, resultRecordCount: String(maxRecords) } : params;
 }
 
 export interface ArcGisQueryOptions {
@@ -198,13 +198,22 @@ export async function queryArcGisLayer(options: ArcGisQueryOptions): Promise<Arc
   const params = buildQueryParams(geometry, outFields, maxRecords);
   const requestUrl = `${endpoint}?${new URLSearchParams({ ...params, geometry: "<AOI polygon>" }).toString()}`;
 
-  const { body, text, durationMs } = await postArcGis(endpoint, params, timeoutMs, requestUrl);
+  let result: { body: Record<string, unknown>; text: string; durationMs: number };
+  try {
+    result = await postArcGis(endpoint, params, timeoutMs, requestUrl);
+  } catch (error) {
+    if (!(error instanceof ArcGisError) || !/Pagination is not supported/i.test(error.message)) {
+      throw error;
+    }
+    const fallbackParams = buildQueryParams(geometry, outFields);
+    result = await postArcGis(endpoint, fallbackParams, timeoutMs, requestUrl);
+  }
 
   return {
-    features: parseArcGisFeatures(body),
+    features: parseArcGisFeatures(result.body),
     requestUrl,
-    checksum: createHash("sha256").update(text).digest("hex").slice(0, 32),
-    durationMs,
+    checksum: createHash("sha256").update(result.text).digest("hex").slice(0, 32),
+    durationMs: result.durationMs,
   };
 }
 

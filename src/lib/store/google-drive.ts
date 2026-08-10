@@ -5,6 +5,7 @@ interface GoogleDriveStoreOptions {
   clientId?: string;
   clientSecret?: string;
   refreshToken?: string;
+  fileId?: string;
   folderId?: string;
   folderName?: string;
   fileName?: string;
@@ -36,6 +37,7 @@ interface DriveContext {
   clientId: string;
   clientSecret: string;
   refreshToken: string;
+  fileId?: string;
   folderId?: string;
   folderName: string;
   fileName: string;
@@ -197,6 +199,7 @@ async function ensureFolderId(ctx: DriveContext): Promise<string> {
 }
 
 async function ensureDatabaseFile(ctx: DriveContext): Promise<string> {
+  if (ctx.fileId) return ctx.fileId;
   const folderId = await ensureFolderId(ctx);
   const query = [
     `name=${driveQueryLiteral(ctx.fileName)}`,
@@ -272,6 +275,7 @@ export function createGoogleDriveStore(options: GoogleDriveStoreOptions): Store 
     clientId: required(options.clientId, "GOOGLE_DRIVE_CLIENT_ID"),
     clientSecret: required(options.clientSecret, "GOOGLE_DRIVE_CLIENT_SECRET"),
     refreshToken: required(options.refreshToken, "GOOGLE_DRIVE_REFRESH_TOKEN"),
+    fileId: options.fileId?.trim() || undefined,
     folderId: options.folderId?.trim() || undefined,
     folderName: options.folderName?.trim() || DEFAULT_FOLDER_NAME,
     fileName: options.fileName?.trim() || DEFAULT_FILE_NAME,
