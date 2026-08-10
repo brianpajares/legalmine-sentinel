@@ -1,0 +1,123 @@
+import { randomUUID } from "node:crypto";
+
+import type { Project } from "@/types/assessment";
+import { AoiParseError, parseAoiFromCoordinates, parseAoiFromText } from "@/lib/geo/parse";
+import { summarize } from "@/lib/geo/measure";
+import { getStore } from "@/lib/store";
+import { badRequest, created, ok, readJson, serverError } from "@/lib/api/respond";
+import { isDemoMode } from "@/lib/sources/config";
+import { DEMO_AOI, DEMO_ORG_ID, DEMO_PROJECT_NAME } from "@/lib/demo/fixtures";
+
+export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
+
+interface CreateProjectBody {
+  name?: string;
+  country?: string;
+  notes?: string;
+  /** Raw contents of an uploaded .geojson / .kml file. */
+  geometryText?: string;
+  filename?: string;
+  /** Alternative input: a centre point plus a radius. */
+  latitude?: number;
+  longitude?: number;
+  radiusMeters?: number;
+  /** Seeds the labelled demonstration project. Only honoured in demo mode. */
+  demo?: boolean;
+}
+
+export async function GET() {
+  try {
+    const store = await getStore();
+    const projects = await store.listProjects();
+    return ok({ projects, storage: { kind: store.kind, ephemeral: store.ephemeral } });
+  } catch (error) {
+    return serverError(error);
+  }
+}
+
+export async function POST(request: Request) {
+  const body = await readJson<CreateProjectBody>(request);
+  if (!body) return badRequest("A JSON body is required.");
+
+  try {
+    const store = await getStore();
+
+    if (body.demo) {
+      if (!isDemoMode()) {
+        return badRequest(
+          "Demo mode is disabled on this deployment.",
+          "Set NEXT_PUBLIC_DEMO_MODE=true to seed the demonstration project.",
+          "DEMO_DISABLED",
+        );
+      }
+      const parsed = {
+        geometry: DEMO_AOI,
+        format: "geojson" as const,
+        warnings: ["Demonstration area of interest. Not a client polygon."],
+      };
+      const project: Project = {
+        id: `prj_${randomUUID().replace(/-/g, "").slice(0, 20)}`,
+        orgId: DEMO_ORG_ID,
+        name: DEMO_PROJECT_NAME,
+        country: "PE",
+        geometry: DEMO_AOI,
+        geometrySummary: summarize(parsed),
+        createdAt: new Date().toISOString(),
+        demo: true,
+        notes: "Seeded demonstration project. All source records are fictional and labelled DEMO.",
+      };
+      await store.saveProject(project);
+      return created({ project, warnings: parsed.warnings });
+    }
+
+    const name = body.name?.trim();
+    if (!name) return badRequest("A project name is required.");
+
+    let parsed;
+    if (body.geometryText) {
+      parsed = parseAoiFromText(body.geometryText, body.filename);
+    } else if (
+      typeof body.latitude === "number" &&
+      typeof body.longitude === "number" &&
+      typeof body.radiusMeters === "number"
+    ) {
+      parsed = parseAoiFromCoordinates(body.latitude, body.longitude, body.radiusMeters);
+    } else {
+      return badRequest(
+        "An area of interest is required.",
+        "Upload a .geojson or .kml file, or supply latitude, longitude and radiusMeters.",
+        "AOI_REQUIRED",
+      );
+    }
+
+    const geometrySummary = summarize(parsed);
+    if (geometrySummary.areaHectares <= 0) {
+      return badRequest(
+        "The area of interest has no measurable surface.",
+        "Check that the polygon is not degenerate and that coordinates are in WGS84 decimal degrees.",
+        "AOI_EMPTY",
+      );
+    }
+
+    const project: Project = {
+      id: `prj_${randomUUID().replace(/-/g, "").slice(0, 20)}`,
+      orgId: "default",
+      name,
+      country: body.country?.trim() || "PE",
+      geometry: parsed.geometry,
+      geometrySummary,
+      createdAt: new Date().toISOString(),
+      demo: false,
+      notes: body.notes?.trim() || undefined,
+    };
+
+    await store.saveProject(project);
+    return created({ project, warnings: parsed.warnings });
+  } catch (error) {
+    if (error instanceof AoiParseError) {
+      return badRequest("The area of interest could not be read.", error.message, "AOI_INVALID");
+    }
+    return serverError(error);
+  }
+}

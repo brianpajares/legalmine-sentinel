@@ -1,0 +1,294 @@
+<title>LegalMine Sentinel — One-pager</title>
+<style>
+  :root {
+    --ground: #eff1ec;
+    --panel: #f7f8f5;
+    --ink: #161d1a;
+    --ink-2: #37423d;
+    --muted: #69746d;
+    --rule: #cbd1c7;
+    --rule-soft: #dde1d8;
+    --accent: #0e6a4e;
+    --accent-soft: #d9e8e1;
+    --copper: #a9542b;
+    --copper-soft: #f0e0d6;
+
+    --display: Georgia, "Iowan Old Style", "Times New Roman", serif;
+    --body: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    --mono: ui-monospace, "SF Mono", "Cascadia Mono", "Roboto Mono", Menlo, monospace;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --ground: #101613;
+      --panel: #19211d;
+      --ink: #e6eae4;
+      --ink-2: #b8c2ba;
+      --muted: #8b968e;
+      --rule: #2c3833;
+      --rule-soft: #222b27;
+      --accent: #4ccb9c;
+      --accent-soft: #16302743;
+      --copper: #e0995f;
+      --copper-soft: #3a281c;
+    }
+  }
+
+  :root[data-theme="dark"] {
+    --ground: #101613;
+    --panel: #19211d;
+    --ink: #e6eae4;
+    --ink-2: #b8c2ba;
+    --muted: #8b968e;
+    --rule: #2c3833;
+    --rule-soft: #222b27;
+    --accent: #4ccb9c;
+    --accent-soft: #16302743;
+    --copper: #e0995f;
+    --copper-soft: #3a281c;
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    background: var(--ground);
+    color: var(--ink);
+    font-family: var(--body);
+    font-size: 15px;
+    line-height: 1.55;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .sheet {
+    max-width: 62rem;
+    margin: 0 auto;
+    padding: clamp(2rem, 5vw, 3.5rem) clamp(1.25rem, 4vw, 3rem) 3rem;
+  }
+
+  header { border-bottom: 2px solid var(--ink); padding-bottom: 1.5rem; }
+  .wordmark {
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: 0.3em;
+    text-transform: uppercase;
+    color: var(--accent);
+  }
+  h1 {
+    font-family: var(--display);
+    font-size: clamp(1.9rem, 4.2vw, 2.85rem);
+    line-height: 1.06;
+    letter-spacing: -0.02em;
+    margin: 0.85rem 0 0;
+    max-width: 26ch;
+    text-wrap: balance;
+  }
+  .sub { margin: 1rem 0 0; max-width: 66ch; color: var(--ink-2); font-size: 1.02rem; }
+
+  h2 {
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: var(--muted);
+    font-weight: 600;
+    margin: 0 0 1rem;
+    padding-bottom: 0.5rem;
+    border-bottom: 1px solid var(--rule);
+  }
+  section { margin-top: 2.5rem; }
+  p { margin: 0; max-width: 68ch; color: var(--ink-2); }
+  strong { color: var(--ink); font-weight: 650; }
+
+  .cols { display: grid; gap: 1.75rem; }
+  @media (min-width: 760px) { .cols-2 { grid-template-columns: 1.15fr 1fr; } .cols-3 { grid-template-columns: repeat(3, 1fr); } }
+
+  .stack { display: flex; flex-direction: column; gap: 0.85rem; }
+
+  .card { background: var(--panel); border: 1px solid var(--rule-soft); padding: 1.1rem 1.2rem; display: flex; flex-direction: column; gap: 0.45rem; }
+  .card h3 { font-family: var(--display); font-size: 1.02rem; margin: 0; }
+  .card p { font-size: 0.9rem; }
+  .tag { font-family: var(--mono); font-size: 10px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--accent); }
+
+  ul { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 0.6rem; }
+  li { display: flex; gap: 0.7rem; align-items: baseline; font-size: 0.94rem; color: var(--ink-2); }
+  .mark { font-family: var(--mono); color: var(--accent); flex: none; }
+
+  .scroll-x { overflow-x: auto; }
+  table { border-collapse: collapse; width: 100%; font-size: 0.9rem; }
+  th, td { text-align: left; padding: 0.62rem 0.8rem; border-bottom: 1px solid var(--rule-soft); vertical-align: top; }
+  th { font-family: var(--mono); font-size: 10px; letter-spacing: 0.13em; text-transform: uppercase; color: var(--muted); border-bottom-color: var(--rule); }
+  td:first-child { color: var(--ink); font-weight: 600; }
+  .num { font-family: var(--mono); font-variant-numeric: tabular-nums; }
+
+  .metrics { display: grid; gap: 1px; background: var(--rule); border: 1px solid var(--rule); }
+  @media (min-width: 620px) { .metrics { grid-template-columns: repeat(3, 1fr); } }
+  .metrics div { background: var(--panel); padding: 1.1rem 1.2rem; }
+  .metric { font-family: var(--display); font-size: 2rem; line-height: 1; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; }
+  .metrics span { font-family: var(--mono); font-size: 10px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--muted); display: block; margin-bottom: 0.5rem; }
+  .metrics p { font-size: 0.85rem; margin-top: 0.45rem; }
+
+  .callout { border-left: 3px solid var(--copper); background: var(--copper-soft); padding: 1rem 1.2rem; }
+  .callout p { color: var(--ink); max-width: 62ch; }
+
+  footer {
+    margin-top: 3rem;
+    padding-top: 1.25rem;
+    border-top: 1px solid var(--rule);
+    font-family: var(--mono);
+    font-size: 10.5px;
+    letter-spacing: 0.06em;
+    color: var(--muted);
+  }
+
+  @media print {
+    body { background: #fff; color: #000; font-size: 10.5pt; }
+    .sheet { padding: 0; max-width: none; }
+    section { margin-top: 1.4rem; break-inside: avoid; }
+    .card, .metrics div { background: #fff; }
+  }
+</style>
+
+<div class="sheet">
+  <header>
+    <div class="wordmark">LegalMine Sentinel</div>
+    <h1>Cada número apunta a una fuente. Cuando el dato falta, lo decimos.</h1>
+    <p class="sub">
+      Tamizaje de riesgo legal y territorial para activos mineros en Perú, con evidencia
+      trazable y reproducible meses después de emitido el informe.
+    </p>
+  </header>
+
+  <section class="cols cols-2">
+    <div>
+      <h2>El problema</h2>
+      <div class="stack">
+        <p>
+          Evaluar una concesión en Perú obliga a consultar seis instituciones —INGEMMET,
+          SERNANP, MINEM, ANA, Ministerio de Cultura e imágenes satelitales— cada una con su
+          portal, su formato y su propia noción de qué está vigente.
+        </p>
+        <p>
+          Son semanas de trabajo manual para responder, muchas veces, una pregunta de
+          descarte. Y cuando la respuesta llega, ya no se puede demostrar contra qué versión
+          del dato se decidió.
+        </p>
+      </div>
+    </div>
+    <div>
+      <h2>La solución</h2>
+      <div class="stack">
+        <p>
+          Se carga el polígono (GeoJSON, KML o coordenadas) y el sistema devuelve un riesgo
+          <strong>0–100 en cinco dimensiones</strong>, con reglas explícitas y versionadas, y
+          un dossier imprimible donde cada hallazgo cita su fuente, su fecha de consulta y un
+          enlace al portal oficial para verificarlo a mano.
+        </p>
+        <p>
+          Minutos en lugar de semanas — y a diferencia de un PDF de consultoría, el resultado
+          es re-derivable.
+        </p>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <h2>Lo que lo hace distinto</h2>
+    <div class="cols cols-3">
+      <div class="card">
+        <span class="tag">Trazabilidad</span>
+        <h3>Sin evidencia no hay número</h3>
+        <p>Cada factor de riesgo apunta a registros concretos. Un factor sin evidencia es un bug, no una decisión de diseño.</p>
+      </div>
+      <div class="card">
+        <span class="tag">Reproducibilidad</span>
+        <h3>Base mensual fechada</h3>
+        <p>Las fuentes se cosechan en snapshots inmutables con checksum. Un dossier de agosto sigue siendo re-derivable en octubre.</p>
+      </div>
+      <div class="card">
+        <span class="tag">Honestidad</span>
+        <h3>No evaluado ≠ bajo</h3>
+        <p>Si nada pudo evaluarse el resultado es NOT_ASSESSED, no LOW. Un cero no medido presentado como riesgo bajo sería lo más peligroso que podríamos decir.</p>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <h2>Modelo de negocio</h2>
+    <div class="cols cols-2">
+      <div class="stack">
+        <p>
+          <strong>El tamizaje se compra una vez; el monitoreo se paga todos los meses.</strong>
+          Al comparar el snapshot de este mes contra el anterior, el producto responde qué se
+          movió: concesiones nuevas que se superponen, cambios de estado, límites de áreas
+          protegidas modificados.
+        </p>
+        <p>
+          Es la pregunta que el mismo cliente vuelve a hacerse cada mes sobre las mismas
+          áreas. Por eso el precio escala por área vigilada, no por asiento: el valor crece
+          con las hectáreas en riesgo, no con cuánta gente mira la pantalla.
+        </p>
+      </div>
+      <div class="scroll-x">
+        <table>
+          <thead><tr><th>Componente</th><th>Precio</th></tr></thead>
+          <tbody>
+            <tr><td>Plataforma</td><td class="num">$299 / mes</td></tr>
+            <tr><td>Monitoreo por área</td><td class="num">$49 / área / mes</td></tr>
+            <tr><td>Dossier certificado</td><td class="num">$199 / unidad</td></tr>
+            <tr><td>Retención extendida</td><td class="num">+20%</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <h2>Estado verificado hoy</h2>
+    <div class="metrics">
+      <div>
+        <span>Pruebas</span>
+        <div class="metric">47</div>
+        <p>En verde, incluido un barrido que falla el build si reaparecen datos inventados.</p>
+      </div>
+      <div>
+        <span>Fuentes oficiales</span>
+        <div class="metric">6</div>
+        <p>Adaptadores tras una interfaz común, con degradación explícita.</p>
+      </div>
+      <div>
+        <span>Despliegue</span>
+        <div class="metric">Live</div>
+        <p>Build de producción compilando, desplegado, con cron mensual programado.</p>
+      </div>
+    </div>
+    <ul style="margin-top:1.25rem;">
+      <li><span class="mark">✓</span><span>Motor de riesgo determinista con reglas versionadas y pesos a la vista</span></li>
+      <li><span class="mark">✓</span><span>Snapshots sellados por checksum e inmutables por trigger de base de datos</span></li>
+      <li><span class="mark">✓</span><span>Cosecha resumible: un catastro nacional no cabe en una invocación serverless</span></li>
+      <li><span class="mark">✓</span><span>Dossier que cita período y checksum de cada snapshot usado</span></li>
+    </ul>
+  </section>
+
+  <section>
+    <h2>Expansión</h2>
+    <p>
+      Los adaptadores viven detrás de una interfaz común y las reglas se versionan por
+      jurisdicción: añadir un país es configurar capas y calibrar pesos, no reescribir el
+      producto. Orden previsto: <strong>Perú → Chile → Colombia → México → Brasil</strong>.
+      El argumento internacional no es “cubrimos Perú”, sino el mismo motor de trazabilidad
+      aplicado a la jurisdicción donde el comprador invierte.
+    </p>
+    <div class="callout" style="margin-top:1.25rem;">
+      <p>
+        El foso real es el histórico: cada mes que pasa, el corpus vale más y es más difícil
+        de replicar. Un competidor que arranque hoy tarda dos años en tener dos años de
+        historia.
+      </p>
+    </div>
+  </section>
+
+  <footer>
+    Tamizaje preliminar sobre fuentes oficiales y referenciadas · No establece legalidad, título ni cumplimiento · No constituye asesoría legal
+  </footer>
+</div>
