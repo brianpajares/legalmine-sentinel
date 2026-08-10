@@ -1,7 +1,7 @@
 "use client";
 
 import { useRef, useState } from "react";
-import { AlertTriangle, FlaskConical, MapPin, Upload } from "lucide-react";
+import { AlertTriangle, Download, FlaskConical, MapPin, Sparkles, Upload } from "lucide-react";
 
 import type { Project } from "@/types/assessment";
 import { Panel, PanelHeader, ScreeningDisclaimer } from "@/components/ui/Primitives";
@@ -16,6 +16,7 @@ interface CreateAssessmentProps {
 }
 
 const MAX_FILE_BYTES = 12 * 1024 * 1024;
+const INVESTOR_DEMO_KML = "/demo/legalmine-investor-concession-demo.kml";
 
 function arrayBufferToBase64(buffer: ArrayBuffer): string {
   let binary = "";
@@ -88,6 +89,26 @@ export default function CreateAssessment({
       onProjectReady(payload.project, payload.warnings ?? []);
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : "Network error.");
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  async function loadInvestorDemoKml() {
+    setSubmitting(true);
+    setError(null);
+    try {
+      const response = await fetch(INVESTOR_DEMO_KML);
+      if (!response.ok) throw new Error(`No se pudo cargar el KML demo (${response.status}).`);
+      const text = await response.text();
+      setMode("file");
+      setName("Investor Demo - Concession Screening");
+      setFileName("legalmine-investor-concession-demo.kml");
+      setFileText(text);
+      setFileBase64(null);
+      track("investor_demo_kml_loaded", { source: "predefined_kml" });
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : "No se pudo cargar el KML demo.");
     } finally {
       setSubmitting(false);
     }
@@ -237,6 +258,40 @@ export default function CreateAssessment({
               {error}
             </p>
           ) : null}
+
+          <div className="rounded-xl border border-blue-500/20 bg-blue-500/[0.06] p-4">
+            <div className="flex flex-wrap items-start justify-between gap-3">
+              <div className="min-w-0">
+                <p className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-blue-200">
+                  <Sparkles className="h-3.5 w-3.5" />
+                  Demo para inversionistas
+                </p>
+                <p className="mt-1 text-[11px] leading-relaxed text-gray-400">
+                  Precarga un KML de ejemplo para mostrar el flujo de concesion minera, mapa de
+                  evidencia, radar y dossier sin preparar un archivo externo.
+                </p>
+              </div>
+              <div className="flex shrink-0 flex-wrap gap-2">
+                <button
+                  type="button"
+                  disabled={disabled}
+                  onClick={() => void loadInvestorDemoKml()}
+                  className="inline-flex items-center gap-1.5 rounded-lg bg-blue-600 px-3 py-2 text-[11px] font-semibold text-white transition hover:bg-blue-500 disabled:opacity-60"
+                >
+                  <Upload className="h-3.5 w-3.5" />
+                  Precargar KML
+                </button>
+                <a
+                  href={INVESTOR_DEMO_KML}
+                  download
+                  className="inline-flex items-center gap-1.5 rounded-lg border border-white/15 px-3 py-2 text-[11px] font-semibold text-gray-300 transition hover:bg-white/5"
+                >
+                  <Download className="h-3.5 w-3.5" />
+                  Descargar
+                </a>
+              </div>
+            </div>
+          </div>
 
           <button
             type="submit"

@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import type { ReactNode } from "react";
 import Link from "next/link";
-import { AlertTriangle, CheckCircle2, FileText, Radar, TrendingUp } from "lucide-react";
+import { AlertTriangle, CheckCircle2, FileText, LandPlot, Radar, TrendingUp } from "lucide-react";
 
 import type { Assessment } from "@/types/assessment";
 import { EmptyState, Meter, Panel, PanelHeader } from "@/components/ui/Primitives";
@@ -151,6 +151,7 @@ function CurrentRadar({ assessment }: { assessment: Assessment }) {
   const sourcesOk = assessment.sourceStatus.filter((source) => source.status === "OK" || source.status === "STALE");
   const evidenceFindings = assessment.evidence.filter((item) => item.kind === "finding");
   const mappedFindings = evidenceFindings.filter((item) => item.geometry);
+  const concessionFindings = evidenceFindings.filter((item) => item.sourceKey === "ingemmet");
 
   return (
     <Panel className="overflow-hidden p-0">
@@ -183,6 +184,8 @@ function CurrentRadar({ assessment }: { assessment: Assessment }) {
         </div>
 
         <div className="p-5">
+          <ConcessionAnalysis findings={concessionFindings} />
+
           <div className="grid gap-4 md:grid-cols-2">
             <InsightCard
               icon={<TrendingUp className="h-4 w-4" />}
@@ -248,6 +251,97 @@ function CurrentRadar({ assessment }: { assessment: Assessment }) {
   );
 }
 
+function ConcessionAnalysis({ findings }: { findings: Assessment["evidence"] }) {
+  const concessions = findings.map((item) => ({
+    id: item.id,
+    title: item.title,
+    code: textValue(item.metadata.code),
+    name: textValue(item.metadata.name),
+    status: textValue(item.metadata.status),
+    holder: textValue(item.metadata.holder),
+    substance: textValue(item.metadata.substance),
+    declaredHectares: numberValue(item.metadata.declaredHectares),
+    overlapHectares: numberValue(item.metadata.overlapHectares),
+    overlapPercentOfAoi: numberValue(item.metadata.overlapPercentOfAoi),
+    hasGeometry: Boolean(item.geometry),
+  }));
+  const mapped = concessions.filter((item) => item.hasGeometry);
+  const totalOverlap = concessions.reduce((sum, item) => sum + (item.overlapHectares ?? 0), 0);
+  const maxCoverage = concessions.reduce(
+    (max, item) => Math.max(max, item.overlapPercentOfAoi ?? 0),
+    0,
+  );
+  const principal =
+    [...concessions].sort((a, b) => (b.overlapPercentOfAoi ?? 0) - (a.overlapPercentOfAoi ?? 0))[0] ??
+    null;
+
+  return (
+    <section className="mb-4 rounded-xl border border-sky-500/20 bg-sky-500/[0.06] p-4">
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <div className="flex items-center gap-2">
+            <LandPlot className="h-4 w-4 text-sky-300" />
+            <h3 className="text-sm font-bold text-white">Analisis de concesion minera</h3>
+          </div>
+          <p className="mt-1 text-[11px] leading-relaxed text-gray-400">
+            Lectura especifica de INGEMMET: derechos que intersectan el area, estado publicado,
+            titular reportado y cobertura espacial usada por el radar.
+          </p>
+        </div>
+        <span className="rounded-full border border-sky-400/30 bg-sky-500/10 px-3 py-1 text-[10px] font-bold uppercase text-sky-200">
+          {concessions.length} derecho(s)
+        </span>
+      </div>
+
+      {concessions.length === 0 ? (
+        <div className="mt-4 rounded-lg border border-white/10 bg-black/15 p-3">
+          <p className="text-xs font-semibold text-white">Sin concesiones superpuestas reportadas</p>
+          <p className="mt-1 text-[11px] leading-relaxed text-gray-500">
+            El catastro no devolvio derechos mineros intersectantes, o la fuente no pudo devolver
+            hallazgos. Esto no confirma disponibilidad legal; solo reduce complejidad catastral
+            preliminar si la fuente respondio correctamente.
+          </p>
+        </div>
+      ) : (
+        <>
+          <div className="mt-4 grid gap-2 sm:grid-cols-4">
+            <Metric label="Derechos" value={String(concessions.length)} />
+            <Metric label="Con mapa" value={String(mapped.length)} />
+            <Metric label="Solape ha" value={formatSmallNumber(totalOverlap)} />
+            <Metric label="Max. cobertura" value={`${formatSmallNumber(maxCoverage)}%`} />
+          </div>
+
+          {principal ? (
+            <div className="mt-3 rounded-lg border border-white/10 bg-black/20 p-3">
+              <p className="text-[10px] font-semibold uppercase tracking-wider text-gray-500">
+                Derecho principal por cobertura
+              </p>
+              <div className="mt-2 grid gap-2 md:grid-cols-2">
+                <Fact label="Codigo" value={principal.code ?? "No reportado"} mono />
+                <Fact label="Nombre" value={principal.name ?? principal.title} />
+                <Fact label="Estado" value={principal.status ?? "No reportado"} />
+                <Fact label="Titular" value={principal.holder ?? "No reportado"} />
+                <Fact label="Sustancia" value={principal.substance ?? "No reportado"} />
+                <Fact
+                  label="Cobertura AOI"
+                  value={`${formatSmallNumber(principal.overlapPercentOfAoi ?? 0)}% (${formatSmallNumber(
+                    principal.overlapHectares ?? 0,
+                  )} ha)`}
+                />
+              </div>
+              <p className="mt-3 text-[11px] leading-relaxed text-sky-100/90">
+                Impacto en radar: una concesion titulada o en tramite no significa inviabilidad,
+                pero cambia la tesis comercial: se debe revisar expediente, titular, pagos,
+                gravamenes y estrategia de negociacion antes de presentar el activo como libre.
+              </p>
+            </div>
+          ) : null}
+        </>
+      )}
+    </section>
+  );
+}
+
 function InsightCard({
   icon,
   title,
@@ -298,6 +392,15 @@ function Metric({ label, value }: { label: string; value: string }) {
   );
 }
 
+function Fact({ label, value, mono = false }: { label: string; value: string; mono?: boolean }) {
+  return (
+    <div className="rounded border border-white/10 bg-white/[0.03] px-3 py-2">
+      <p className="text-[10px] font-semibold uppercase tracking-wider text-gray-500">{label}</p>
+      <p className={`mt-1 break-all text-xs text-gray-200 ${mono ? "font-mono" : ""}`}>{value}</p>
+    </div>
+  );
+}
+
 function FindingTile({ label, value, detail }: { label: string; value: string; detail: string }) {
   return (
     <div className="rounded-lg border border-white/10 bg-black/15 p-3">
@@ -310,6 +413,21 @@ function FindingTile({ label, value, detail }: { label: string; value: string; d
 
 function countEvidence(assessment: Assessment, sourceKeys: string[]) {
   return assessment.evidence.filter((item) => item.kind === "finding" && sourceKeys.includes(item.sourceKey)).length;
+}
+
+function textValue(value: unknown): string | null {
+  return typeof value === "string" && value.trim() ? value : null;
+}
+
+function numberValue(value: unknown): number | null {
+  return typeof value === "number" && Number.isFinite(value) ? value : null;
+}
+
+function formatSmallNumber(value: number): string {
+  return new Intl.NumberFormat("en-US", {
+    minimumFractionDigits: 0,
+    maximumFractionDigits: value > 0 && value < 10 ? 2 : 1,
+  }).format(value);
 }
 
 function opportunityVerdict(score: number): string {

@@ -12,6 +12,7 @@ export type AnalyticsEvent =
   | "landing_view"
   | "launch_app_clicked"
   | "assessment_started"
+  | "investor_demo_kml_loaded"
   | "geometry_uploaded"
   | "source_check_completed"
   | "assessment_completed"
