@@ -26,7 +26,7 @@ interface LandingProps {
 }
 
 export default function Landing({ metrics, demoMode, ruleVersion }: LandingProps) {
-  const [language, setLanguage] = useState<Language>("en");
+  const [language, setLanguage] = useState<Language>("es");
   const copy = LANDING_COPY[language];
 
   useEffect(() => {
@@ -238,19 +238,19 @@ function DataTrust({ copy, ruleVersion }: { copy: (typeof LANDING_COPY)["en"]; r
 
         <div className="mt-8 overflow-hidden rounded-xl border border-white/10">
           {sources === null && !failed ? (
-            <p className="px-4 py-6 text-center text-xs text-gray-500">Checking connectors…</p>
+            <p className="px-4 py-6 text-center text-xs text-gray-500">Verificando conectores...</p>
           ) : failed ? (
             <p className="px-4 py-6 text-center text-xs text-gray-500">
-              Connector status could not be read from this browser. Open{" "}
-              <code className="text-gray-400">/api/health/sources</code> for the live answer.
+              No se pudo leer el estado de conectores desde este navegador. Abre{" "}
+              <code className="text-gray-400">/api/health/sources</code> para ver la respuesta en vivo.
             </p>
           ) : (
             <table className="w-full text-left text-xs">
               <thead className="bg-white/5 text-[10px] uppercase tracking-wider text-gray-500">
                 <tr>
-                  <th className="px-4 py-2.5 font-semibold">Source</th>
-                  <th className="px-4 py-2.5 font-semibold">Status</th>
-                  <th className="hidden px-4 py-2.5 font-semibold md:table-cell">Detail</th>
+                  <th className="px-4 py-2.5 font-semibold">Fuente</th>
+                  <th className="px-4 py-2.5 font-semibold">Estado</th>
+                  <th className="hidden px-4 py-2.5 font-semibold md:table-cell">Detalle</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-white/5">
@@ -278,7 +278,7 @@ function DataTrust({ copy, ruleVersion }: { copy: (typeof LANDING_COPY)["en"]; r
         </div>
 
         <p className="mt-5 rounded-lg border border-blue-500/25 bg-blue-500/10 px-4 py-3 text-xs leading-relaxed text-blue-200">
-          {copy.trust.note} Current rule set: <strong className="font-semibold">{ruleVersion}</strong>.
+          {copy.trust.note} Version de reglas vigente: <strong className="font-semibold">{ruleVersion}</strong>.
         </p>
       </div>
     </section>

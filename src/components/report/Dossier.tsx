@@ -5,7 +5,6 @@ import type { Evidence } from "@/types/evidence";
 import AoiSketch from "./AoiSketch";
 import PrintButton from "./PrintButton";
 import { formatHectares, formatTimestamp, STATUS_LABELS, TIER_LABELS } from "@/lib/ui/format";
-import { headline } from "@/lib/scoring/engine";
 
 /**
  * Preliminary due-diligence dossier (Plan Maestro §10).
@@ -50,15 +49,14 @@ export default function Dossier({
     <article className="mx-auto max-w-4xl px-5 py-8 text-gray-200 print-surface">
       <nav className="mb-6 flex flex-wrap items-center justify-between gap-3 no-print">
         <Link href="/app" className="text-xs font-semibold text-blue-400 hover:text-blue-300">
-          ← Back to the workspace
+          ← Volver al panel
         </Link>
         <PrintButton assessmentId={assessment.id} />
       </nav>
 
       {assessment.demoMode ? (
         <p className="mb-6 rounded-lg border border-fuchsia-400/60 bg-fuchsia-500/15 px-4 py-3 text-xs font-semibold text-fuchsia-100 print-surface">
-          DEMONSTRATION DOSSIER — every record below is fictional fixture data. No government service
-          was queried for this assessment.
+          DOSSIER DE DEMOSTRACION: los registros siguientes son datos ficticios de prueba. No se consulto ningun servicio gubernamental para este analisis.
         </p>
       ) : null}
 
@@ -68,23 +66,23 @@ export default function Dossier({
           LegalMine Sentinel
         </p>
         <h1 className="mt-2 text-2xl font-extrabold tracking-tight text-white">
-          Preliminary mining due-diligence screening
+          Informe preliminar de tamizaje legal y territorial minero
         </h1>
         <p className="mt-1 text-lg font-semibold text-gray-300">{assessment.projectName}</p>
 
         <dl className="mt-5 grid gap-x-6 gap-y-2 text-[11px] sm:grid-cols-2">
-          <Meta label="Assessment ID" value={assessment.id} mono />
-          <Meta label="Rule version" value={assessment.ruleVersion} mono />
-          <Meta label="Generated" value={formatTimestamp(assessment.createdAt)} />
-          <Meta label="Assessment status" value={assessment.status} />
-          <Meta label="Geometry hash" value={assessment.geometrySummary.geometryHash} mono />
-          <Meta label="Country" value={project?.country ?? "—"} />
+          <Meta label="ID del analisis" value={assessment.id} mono />
+          <Meta label="Version de reglas" value={assessment.ruleVersion} mono />
+          <Meta label="Generado" value={formatTimestamp(assessment.createdAt)} />
+          <Meta label="Estado del analisis" value={assessment.status} />
+          <Meta label="Huella de geometria" value={assessment.geometrySummary.geometryHash} mono />
+          <Meta label="Pais" value={project?.country ?? "—"} />
           <Meta
-            label="Evidence basis"
+            label="Base de evidencia"
             value={
               assessment.basisMode === "corpus"
-                ? `Monthly snapshot — ${assessment.corpusBasis.map((b) => b.period).join(", ")}`
-                : "Live query at assessment time"
+                ? `Snapshot mensual - ${assessment.corpusBasis.map((b) => b.period).join(", ")}`
+                : "Consulta en vivo al momento del analisis"
             }
           />
         </dl>
@@ -92,20 +90,18 @@ export default function Dossier({
         {assessment.corpusBasis.length > 0 ? (
           <div className="mt-5 rounded-lg border border-white/15 bg-white/[0.03] px-4 py-3 print-surface">
             <p className="text-[11px] font-semibold uppercase tracking-wide text-gray-300">
-              Reproducibility basis
+              Base de reproducibilidad
             </p>
             <p className="mt-1 text-[11px] leading-relaxed text-gray-400">
-              This assessment was computed against dated snapshots of the official layers. Re-running
-              it against the same snapshots reproduces this result exactly, for as long as they are
-              retained — the finding does not drift when the source is later edited.
+              Este analisis fue calculado contra snapshots fechados de capas oficiales. Si se vuelve a ejecutar contra los mismos snapshots, el resultado se reproduce mientras esos archivos se conserven; el hallazgo no cambia cuando la fuente oficial se edita despues.
             </p>
             <table className="mt-3 w-full text-left text-[10px]">
               <thead className="text-gray-500">
                 <tr>
-                  <th className="pb-1 font-semibold">Source</th>
-                  <th className="pb-1 font-semibold">Period</th>
-                  <th className="pb-1 font-semibold">Records</th>
-                  <th className="pb-1 font-semibold">Snapshot checksum</th>
+                  <th className="pb-1 font-semibold">Fuente</th>
+                  <th className="pb-1 font-semibold">Periodo</th>
+                  <th className="pb-1 font-semibold">Registros</th>
+                  <th className="pb-1 font-semibold">Checksum del snapshot</th>
                 </tr>
               </thead>
               <tbody className="text-gray-300">
@@ -123,40 +119,35 @@ export default function Dossier({
         ) : null}
 
         <p className="mt-5 rounded-lg border border-amber-500/40 bg-amber-500/10 px-4 py-3 text-[11px] leading-relaxed text-amber-200 print-surface">
-          <strong className="font-bold">Preliminary screening — not legal advice.</strong> This report
-          combines official and referenced datasets to flag issues that merit further investigation. It
-          does not establish legality, title, viability or compliance, and it does not replace review
-          by qualified legal, environmental or land professionals. Cadastral and geospatial data
-          published by government bodies is referential and must be confirmed against the official
-          file before any transaction.
+          <strong className="font-bold">Tamizaje preliminar: no constituye asesoria legal.</strong> Este informe combina fuentes oficiales y referenciales para identificar asuntos que requieren investigacion adicional. No establece legalidad, titularidad, viabilidad ni cumplimiento, y no reemplaza la revision de profesionales legales, ambientales o territoriales calificados. La informacion catastral y geoespacial publicada por entidades publicas es referencial y debe confirmarse contra el expediente oficial antes de cualquier transaccion.
         </p>
       </header>
 
-      <Section number={1} title="Executive summary">
-        <p className="text-sm leading-relaxed text-gray-300">{headline(assessment)}</p>
+      <Section number={1} title="Resumen ejecutivo">
+        <p className="text-sm leading-relaxed text-gray-300">{headlineEs(assessment)}</p>
 
         <div className="mt-4 grid gap-3 sm:grid-cols-2">
           <Stat
-            label="Overall screening risk"
-            value={assessment.riskLevel === "NOT_ASSESSED" ? "—" : `${assessment.overallRisk}/100`}
-            sub={assessment.riskLevel === "NOT_ASSESSED" ? "NOT ASSESSED" : assessment.riskLevel}
+            label="Riesgo preliminar"
+            value={assessment.riskLevel === "NOT_ASSESSED" ? "Sin medir" : `${assessment.overallRisk}/100`}
+            sub={riskLabel(assessment.riskLevel)}
           />
-          <Stat label="Data confidence" value={`${assessment.confidence}/100`} sub={assessment.confidenceLevel} />
+          <Stat label="Confianza de datos" value={`${assessment.confidence}/100`} sub={confidenceLabel(assessment.confidenceLevel)} />
         </div>
 
         <h3 className="mt-6 text-xs font-bold uppercase tracking-wider text-gray-400">
-          Top findings by contribution
+          Hallazgos principales por contribucion
         </h3>
         {topFlags.length === 0 ? (
           <p className="mt-2 text-xs text-gray-500 print-muted">
-            No factor produced a positive contribution to the score in this assessment.
+            Ningun factor produjo una contribucion positiva al score en este analisis.
           </p>
         ) : (
           <ol className="mt-2 space-y-2">
             {topFlags.map((factor) => (
               <li key={factor.factorKey} className="text-xs leading-relaxed text-gray-300">
                 <strong className="font-semibold text-white">
-                  {factor.label} (+{factor.contribution} points, rule {factor.ruleId})
+                  {factor.label} (+{factor.contribution} puntos, regla {factor.ruleId})
                 </strong>
                 <br />
                 {factor.rationale}
@@ -166,11 +157,11 @@ export default function Dossier({
         )}
 
         <h3 className="mt-6 text-xs font-bold uppercase tracking-wider text-gray-400">
-          Top open checks
+          Verificaciones pendientes principales
         </h3>
         {assessment.missingChecks.length === 0 ? (
           <p className="mt-2 text-xs text-gray-500 print-muted">
-            Every configured check was evaluated with live data.
+            Todas las verificaciones configuradas fueron evaluadas con datos en vivo.
           </p>
         ) : (
           <ol className="mt-2 space-y-1.5">
@@ -183,17 +174,17 @@ export default function Dossier({
         )}
       </Section>
 
-      <Section number={2} title="Scope & geometry">
+      <Section number={2} title="Alcance y geometria">
         <dl className="grid gap-x-6 gap-y-2 text-[11px] sm:grid-cols-2">
           <Meta label="Area" value={formatHectares(assessment.geometrySummary.areaHectares)} />
-          <Meta label="Input format" value={assessment.geometrySummary.format.toUpperCase()} />
+          <Meta label="Formato de entrada" value={assessment.geometrySummary.format.toUpperCase()} />
           <Meta label="Vertices" value={String(assessment.geometrySummary.vertexCount)} />
           <Meta
-            label="Centroid (lat, lon)"
+            label="Centroide (lat, lon)"
             value={`${assessment.geometrySummary.centroid[1]}, ${assessment.geometrySummary.centroid[0]}`}
             mono
           />
-          <Meta label="Bounding box" value={assessment.geometrySummary.bbox.join(", ")} mono />
+          <Meta label="Caja envolvente" value={assessment.geometrySummary.bbox.join(", ")} mono />
           <Meta label="CRS" value="WGS84 / EPSG:4326" />
         </dl>
 
@@ -203,21 +194,20 @@ export default function Dossier({
           </div>
         ) : (
           <p className="mt-4 text-xs text-gray-500 print-muted">
-            The project geometry is not available in this deployment&apos;s storage, so the outline
-            could not be redrawn. The geometry hash above still identifies the assessed area.
+            La geometria del proyecto no esta disponible en el almacenamiento de este despliegue, por lo que no se pudo redibujar el contorno. La huella de geometria identifica igualmente el area evaluada.
           </p>
         )}
       </Section>
 
-      <Section number={3} title="Data sources">
+      <Section number={3} title="Fuentes de datos">
         <table className="w-full text-left text-[11px]">
           <thead className="border-b border-white/15 text-[10px] uppercase tracking-wider text-gray-500">
             <tr>
-              <th className="py-2 pr-3 font-semibold">Source</th>
-              <th className="py-2 pr-3 font-semibold">Type</th>
-              <th className="py-2 pr-3 font-semibold">Status</th>
-              <th className="py-2 pr-3 font-semibold">Queried</th>
-              <th className="py-2 font-semibold">Records</th>
+              <th className="py-2 pr-3 font-semibold">Fuente</th>
+              <th className="py-2 pr-3 font-semibold">Tipo</th>
+              <th className="py-2 pr-3 font-semibold">Estado</th>
+              <th className="py-2 pr-3 font-semibold">Consultado</th>
+              <th className="py-2 font-semibold">Registros</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-white/10">
@@ -225,7 +215,7 @@ export default function Dossier({
               <tr key={source.sourceKey} className="align-top">
                 <td className="py-2 pr-3 font-semibold text-gray-200">{source.sourceName}</td>
                 <td className="py-2 pr-3 text-gray-400 print-muted">
-                  {source.official ? "Official" : "Non-official"}
+                  {source.official ? "Oficial" : "No oficial"}
                 </td>
                 <td className="py-2 pr-3 text-gray-300">{STATUS_LABELS[source.status]}</td>
                 <td className="py-2 pr-3 text-gray-400 print-muted">
@@ -248,64 +238,61 @@ export default function Dossier({
         </ul>
       </Section>
 
-      <Section number={4} title="Mining rights screening">
+      <Section number={4} title="Tamizaje de derechos mineros">
         <EvidenceList
           items={findings("ingemmet")}
-          emptyMessage="The mining cadastre returned no intersecting record, or it could not be queried for this assessment. See the source table above for which of the two applies."
+          emptyMessage="El catastro minero no devolvio registros superpuestos, o no pudo consultarse para este analisis. La tabla de fuentes indica cual caso aplica."
         />
       </Section>
 
-      <Section number={5} title="Environmental screening">
+      <Section number={5} title="Tamizaje ambiental">
         <EvidenceList
           items={findings("sernanp")}
-          emptyMessage="No intersecting protected area was returned, or the protected-area service could not be queried. See the source table above."
+          emptyMessage="No se devolvio ningun area natural protegida superpuesta, o el servicio no pudo consultarse. Revisar la tabla de fuentes."
         />
       </Section>
 
-      <Section number={6} title="REINFO formalization screening">
+      <Section number={6} title="Verificacion REINFO">
         <div className="mb-4 rounded-lg border border-blue-500/25 bg-blue-500/10 px-4 py-3 print-surface">
-          <p className="text-xs font-semibold text-blue-100">Official spatial layer + certified portal check</p>
+          <p className="text-xs font-semibold text-blue-100">Capa espacial oficial + verificacion certificada en portal</p>
           <p className="mt-1 text-[11px] leading-relaxed text-blue-100/80">
-            This section uses the MINEM REINFO spatial layer published through GEOCATMIN to identify
-            declared REINFO coordinates intersecting the AOI. For a certified dossier, each COD_REINFO
-            or RUC should still be printed from the MINEM REINFO portal and attached.
+            Esta seccion usa la capa espacial REINFO de MINEM publicada via GEOCATMIN para identificar coordenadas REINFO declaradas que intersectan el area de interes. Para un dossier certificado, cada COD_REINFO o RUC debe imprimirse desde el portal REINFO de MINEM y adjuntarse.
           </p>
         </div>
         <EvidenceList
           items={findings("reinfo")}
-          emptyMessage="The official REINFO spatial layer returned no declared REINFO coordinate intersecting the AOI, or the layer could not be queried. See the source table above for which applies."
+          emptyMessage="La capa espacial oficial REINFO no devolvio coordenadas declaradas que intersecten el area, o no pudo consultarse. La tabla de fuentes indica cual caso aplica."
         />
       </Section>
 
-      <Section number={7} title="Territorial & water context">
+      <Section number={7} title="Contexto territorial e hidrico">
         <p className="text-xs leading-relaxed text-gray-400 print-muted">
           {assessment.missingChecks.some((c) => c.key === "territorial_context" || c.key === "water_context")
-            ? "Territorial and water-resource layers were not evaluated in this assessment. The specific gaps and the actions that would close them are listed in section 10."
-            : "See the evidence records below."}
+            ? "Las capas territoriales e hidricas no fueron evaluadas en este analisis. Las brechas especificas y las acciones para cerrarlas estan listadas en la seccion 10."
+            : "Ver los registros de evidencia siguientes."}
         </p>
         <EvidenceList items={[...findings("bdpi"), ...findings("ana")]} emptyMessage="" />
       </Section>
 
-      <Section number={8} title="Satellite change evidence">
+      <Section number={8} title="Evidencia satelital">
         <EvidenceList
           items={findings("copernicus")}
-          emptyMessage="No satellite scene was catalogued for this assessment. No substitute or illustrative imagery is generated: when the catalogue is unavailable or returns too few usable scenes, this section stays empty."
+          emptyMessage="No se catalogo ninguna escena satelital para este analisis. No se genera imagen sustituta ni ilustrativa: cuando el catalogo no esta disponible o devuelve pocas escenas utiles, esta seccion queda vacia."
         />
         <p className="mt-3 text-[10px] leading-relaxed text-gray-500 print-muted">
-          This version reports scene metadata only. It does not compute a vegetation index and derives
-          no conclusion about activity on the ground from imagery.
+          Esta version reporta solo metadatos de escena. No calcula indice de vegetacion ni deriva conclusiones de actividad en terreno a partir de imagenes.
         </p>
       </Section>
 
-      <Section number={9} title="Risk breakdown">
+      <Section number={9} title="Desglose de riesgo">
         <table className="w-full text-left text-[11px]">
           <thead className="border-b border-white/15 text-[10px] uppercase tracking-wider text-gray-500">
             <tr>
               <th className="py-2 pr-3 font-semibold">Factor</th>
-              <th className="py-2 pr-3 font-semibold">Rule</th>
-              <th className="py-2 pr-3 font-semibold">Severity</th>
-              <th className="py-2 pr-3 font-semibold">Contribution</th>
-              <th className="py-2 font-semibold">Evidence</th>
+              <th className="py-2 pr-3 font-semibold">Regla</th>
+              <th className="py-2 pr-3 font-semibold">Severidad</th>
+              <th className="py-2 pr-3 font-semibold">Contribucion</th>
+              <th className="py-2 font-semibold">Evidencia</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-white/10">
@@ -316,7 +303,7 @@ export default function Dossier({
                   {factor.ruleId}
                 </td>
                 <td className="py-2 pr-3 text-gray-300">
-                  {factor.inconclusive ? "Inconclusive" : `${factor.factorScore}/100`}
+                  {factor.inconclusive ? "Inconcluso" : `${factor.factorScore}/100`}
                 </td>
                 <td className="py-2 pr-3 text-gray-300">
                   {factor.inconclusive ? "—" : `+${factor.contribution}`}
@@ -329,15 +316,15 @@ export default function Dossier({
           </tbody>
         </table>
 
-        <h3 className="mt-5 text-xs font-bold uppercase tracking-wider text-gray-400">Dimensions</h3>
+        <h3 className="mt-5 text-xs font-bold uppercase tracking-wider text-gray-400">Dimensiones</h3>
         <table className="mt-2 w-full text-left text-[11px]">
           <thead className="border-b border-white/15 text-[10px] uppercase tracking-wider text-gray-500">
             <tr>
               <th className="py-2 pr-3 font-semibold">Dimension</th>
-              <th className="py-2 pr-3 font-semibold">Configured weight</th>
-              <th className="py-2 pr-3 font-semibold">Applied weight</th>
+              <th className="py-2 pr-3 font-semibold">Peso configurado</th>
+              <th className="py-2 pr-3 font-semibold">Peso aplicado</th>
               <th className="py-2 pr-3 font-semibold">Score</th>
-              <th className="py-2 font-semibold">Points</th>
+              <th className="py-2 font-semibold">Puntos</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-white/10">
@@ -348,7 +335,7 @@ export default function Dossier({
                   {Math.round(dimension.weight * 100)}%
                 </td>
                 <td className="py-2 pr-3 text-gray-400 print-muted">
-                  {dimension.inconclusive ? "excluded" : `${Math.round(dimension.effectiveWeight * 100)}%`}
+                  {dimension.inconclusive ? "excluido" : `${Math.round(dimension.effectiveWeight * 100)}%`}
                 </td>
                 <td className="py-2 pr-3 text-gray-300">
                   {dimension.inconclusive ? "—" : `${dimension.score}/100`}
@@ -361,16 +348,16 @@ export default function Dossier({
           </tbody>
         </table>
         <p className="mt-3 text-[10px] leading-relaxed text-gray-500 print-muted">
-          Dimensions that could not be evaluated are excluded from the overall score and their weight
-          is redistributed proportionally across the remaining dimensions. Data confidence absorbs the
-          loss instead.
+          Las dimensiones que no pudieron evaluarse se excluyen del score total y su peso se
+          redistribuye proporcionalmente entre las dimensiones restantes. La perdida se refleja en la
+          confianza de datos.
         </p>
       </Section>
 
-      <Section number={10} title="Due-diligence gaps">
+      <Section number={10} title="Brechas de debida diligencia">
         {assessment.missingChecks.length === 0 ? (
           <p className="text-xs text-gray-400 print-muted">
-            Every configured check was evaluated with live data for this assessment.
+            Todas las verificaciones configuradas fueron evaluadas con datos en vivo para este analisis.
           </p>
         ) : (
           <ol className="space-y-3">
@@ -381,10 +368,10 @@ export default function Dossier({
                   {check.reason}
                 </p>
                 <p className="mt-1 text-[11px] leading-relaxed text-gray-400 print-muted">
-                  <strong className="text-gray-300">Conclusion blocked:</strong> {check.blockedConclusion}
+                  <strong className="text-gray-300">Conclusion bloqueada:</strong> {check.blockedConclusion}
                 </p>
                 <p className="mt-1 text-[11px] leading-relaxed text-gray-400 print-muted">
-                  <strong className="text-gray-300">Action:</strong> {check.suggestedAction}
+                  <strong className="text-gray-300">Accion:</strong> {check.suggestedAction}
                 </p>
               </li>
             ))}
@@ -392,11 +379,10 @@ export default function Dossier({
         )}
       </Section>
 
-      <Section number={11} title="Recommended next steps">
+      <Section number={11} title="Siguientes pasos recomendados">
         <ol className="space-y-2 text-xs leading-relaxed text-gray-300">
           <li>
-            1. Close the gaps in section 10 before this screening informs a commitment; each one names
-            the conclusion it currently blocks.
+            1. Cerrar las brechas de la seccion 10 antes de usar este tamizaje para informar un compromiso; cada una indica la conclusion que actualmente bloquea.
           </li>
           {assessment.factors
             .filter((f) => !f.inconclusive && f.nextStep)
@@ -406,39 +392,34 @@ export default function Dossier({
               </li>
             ))}
           <li>
-            • Re-run this assessment before a decision point. Source data changes, and a new run
-            produces a new assessment ID rather than overwriting this one.
+            • Reejecutar este analisis antes de un punto de decision. Las fuentes cambian, y una nueva corrida produce un nuevo ID de analisis en lugar de sobrescribir este.
           </li>
           <li>
-            • Have qualified legal, environmental and land professionals review any finding that would
-            change a commercial position.
+            • Hacer que profesionales legales, ambientales y territoriales calificados revisen cualquier hallazgo que pueda cambiar una posicion comercial.
           </li>
         </ol>
       </Section>
 
-      <Section number={12} title="Commercial packaging">
+      <Section number={12} title="Monetizacion y empaquetamiento comercial">
         <div className="grid gap-3 sm:grid-cols-3">
-          <Stat label="Certified dossier" value="$199" sub="per issued report" />
-          <Stat label="Monitoring" value="$49" sub="per area / month" />
-          <Stat label="Platform" value="$299" sub="monthly access" />
+          <Stat label="Dossier certificado" value="$199" sub="por informe emitido" />
+          <Stat label="Monitoreo" value="$49" sub="por area / mes" />
+          <Stat label="Plataforma" value="$299" sub="acceso mensual" />
         </div>
         <p className="mt-4 text-xs leading-relaxed text-gray-400 print-muted">
-          The screening is sold once; monitoring is recurring. Each month the system compares the
-          current source snapshots against the prior period and reports whether new rights,
-          protected-area changes, REINFO records or context-layer changes touch the watched AOI. A
-          quiet month is still a reportable finding: nothing changed in the checked corpus.
+          El tamizaje se vende una vez; el monitoreo es recurrente. Cada mes el sistema compara los snapshots actuales contra el periodo anterior y reporta si nuevos derechos, cambios en areas protegidas, registros REINFO o cambios de capas de contexto tocan el area vigilada. Un mes sin cambios tambien es un hallazgo reportable: nada cambio en el corpus revisado.
         </p>
       </Section>
 
-      <Section number={13} title="Appendix — evidence register">
+      <Section number={13} title="Anexo - registro de evidencia">
         <table className="w-full text-left text-[10px]">
           <thead className="border-b border-white/15 uppercase tracking-wider text-gray-500">
             <tr>
-              <th className="py-2 pr-3 font-semibold">Evidence ID</th>
-              <th className="py-2 pr-3 font-semibold">Source</th>
-              <th className="py-2 pr-3 font-semibold">Tier</th>
-              <th className="py-2 pr-3 font-semibold">Queried</th>
-              <th className="py-2 font-semibold">Reference</th>
+              <th className="py-2 pr-3 font-semibold">ID de evidencia</th>
+              <th className="py-2 pr-3 font-semibold">Fuente</th>
+              <th className="py-2 pr-3 font-semibold">Nivel</th>
+              <th className="py-2 pr-3 font-semibold">Consultado</th>
+              <th className="py-2 font-semibold">Referencia</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-white/10">
@@ -459,13 +440,13 @@ export default function Dossier({
 
       <footer className="mt-10 border-t border-white/15 pt-4 text-[10px] leading-relaxed text-gray-500 print-muted">
         <p>
-          LegalMine Sentinel · Assessment {assessment.id} · Rule version {assessment.ruleVersion} ·
-          Generated {formatTimestamp(assessment.createdAt)}
+          LegalMine Sentinel · Analisis {assessment.id} · Version de reglas {assessment.ruleVersion} ·
+          Generado {formatTimestamp(assessment.createdAt)}
         </p>
         <p className="mt-1">
-          Preliminary screening based on official and referenced data sources. Not legal advice. This
-          document reproduces the evidence as it stood when the assessment ran; sources are not
-          re-queried when it is reopened.
+          Tamizaje preliminar basado en fuentes oficiales y referenciales. No constituye asesoria
+          legal. Este documento reproduce la evidencia tal como estaba cuando se ejecuto el analisis;
+          las fuentes no se vuelven a consultar al reabrirlo.
         </p>
       </footer>
     </article>
@@ -530,10 +511,47 @@ function EvidenceList({ items, emptyMessage }: { items: Evidence[]; emptyMessage
             <p className="mt-1 text-[11px] leading-relaxed text-gray-400 print-muted">{item.detail}</p>
           ) : null}
           <p className="mt-1 text-[10px] text-gray-500 print-muted">
-            {item.sourceName} · {TIER_LABELS[item.tier]} · queried {formatTimestamp(item.fetchedAt)}
+            {item.sourceName} · {TIER_LABELS[item.tier]} · consultado {formatTimestamp(item.fetchedAt)}
           </p>
         </li>
       ))}
     </ul>
   );
+}
+
+function headlineEs(assessment: Assessment): string {
+  if (assessment.riskLevel === "NOT_ASSESSED") {
+    return (
+      "No se pudo calcular un riesgo preliminar: ninguna dimension de riesgo pudo evaluarse con las " +
+      "fuentes disponibles para este analisis. Un score sin medir refleja ausencia de medicion, no " +
+      "ausencia de riesgo."
+    );
+  }
+
+  const risk = `${riskLabel(assessment.riskLevel).toLowerCase()} (${assessment.overallRisk}/100)`;
+  const confidence = `${confidenceLabel(assessment.confidenceLevel).toLowerCase()} (${assessment.confidence}/100)`;
+  if (assessment.confidenceLevel === "LOW") {
+    return `Riesgo preliminar ${risk}, con ${confidence}. Se requiere verificacion antes de cualquier decision.`;
+  }
+  return `Riesgo preliminar ${risk}, con ${confidence}.`;
+}
+
+function riskLabel(risk: Assessment["riskLevel"]): string {
+  const labels: Record<Assessment["riskLevel"], string> = {
+    NOT_ASSESSED: "No evaluado",
+    LOW: "Bajo",
+    MODERATE: "Moderado",
+    HIGH: "Alto",
+    CRITICAL: "Critico",
+  };
+  return labels[risk];
+}
+
+function confidenceLabel(confidence: Assessment["confidenceLevel"]): string {
+  const labels: Record<Assessment["confidenceLevel"], string> = {
+    LOW: "Confianza baja",
+    MEDIUM: "Confianza media",
+    HIGH: "Confianza alta",
+  };
+  return labels[confidence];
 }

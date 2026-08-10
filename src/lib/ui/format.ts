@@ -21,11 +21,11 @@ export const CONFIDENCE_STYLES: Record<ConfidenceLevel, { text: string; bg: stri
 };
 
 export const STATUS_LABELS: Record<SourceStatus, string> = {
-  OK: "Connected",
-  STALE: "Stale",
-  UNAVAILABLE: "Unavailable",
-  MANUAL_VERIFICATION_REQUIRED: "Manual check required",
-  NOT_CONFIGURED: "Not configured",
+  OK: "Conectado",
+  STALE: "Desactualizado",
+  UNAVAILABLE: "No disponible",
+  MANUAL_VERIFICATION_REQUIRED: "Verificacion manual",
+  NOT_CONFIGURED: "No configurado",
 };
 
 export const STATUS_STYLES: Record<SourceStatus, { text: string; bg: string; border: string }> = {
@@ -37,9 +37,9 @@ export const STATUS_STYLES: Record<SourceStatus, { text: string; bg: string; bor
 };
 
 export const TIER_LABELS: Record<SourceTier, string> = {
-  official: "Official",
-  reference: "Reference",
-  user_provided: "User-provided",
+  official: "Oficial",
+  reference: "Referencia",
+  user_provided: "Provisto por usuario",
   demo: "DEMO",
 };
 

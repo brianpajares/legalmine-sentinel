@@ -16,8 +16,8 @@ export default function SourceCheck({ sources }: { sources: SourceStatusSummary[
   return (
     <Panel className="p-5">
       <PanelHeader
-        title="Source check"
-        subtitle={`${answered.length} of ${sources.length} sources answered for this area of interest.`}
+        title="Verificacion de fuentes"
+        subtitle={`${answered.length} de ${sources.length} fuentes respondieron para esta area de interes.`}
       />
 
       <div className="mt-4 space-y-3">
@@ -27,20 +27,20 @@ export default function SourceCheck({ sources }: { sources: SourceStatusSummary[
               <div className="min-w-0">
                 <h4 className="text-xs font-bold text-white">{source.sourceName}</h4>
                 <p className="mt-1 text-[11px] text-gray-500">
-                  Queried {formatTimestamp(source.fetchedAt)}
-                  {source.validAt ? ` · source validity ${formatTimestamp(source.validAt)}` : ""}
+                  Consultado {formatTimestamp(source.fetchedAt)}
+                  {source.validAt ? ` · vigencia de fuente ${formatTimestamp(source.validAt)}` : ""}
                 </p>
               </div>
               <div className="flex shrink-0 items-center gap-2">
                 <span className="text-[10px] font-semibold uppercase tracking-wider text-gray-500">
-                  {source.official ? "Official" : "Non-official"}
+                  {source.official ? "Oficial" : "No oficial"}
                 </span>
                 <StatusBadge status={source.status} />
               </div>
             </div>
 
             <p className="mt-2.5 text-[11px] font-semibold text-gray-400">
-              {source.recordCount} record(s) returned
+              {source.recordCount} registro(s) devuelto(s)
             </p>
 
             {source.warnings.length > 0 ? (

@@ -70,17 +70,20 @@ export async function GET() {
       probeArcGisSource("bdpi"),
     ]);
 
+    const reinfoProbe = reinfoConfig.layerUrl ? await probeArcGisLayer(reinfoConfig.layerUrl) : null;
     const reinfo: SourceHealth = {
       sourceKey: SOURCE_DEFINITIONS.reinfo.key,
       sourceName: SOURCE_DEFINITIONS.reinfo.name,
       official: true,
       docsUrl: SOURCE_DEFINITIONS.reinfo.docsUrl,
-      configured: Boolean(reinfoConfig.apiUrl),
-      status: reinfoConfig.apiUrl ? "OK" : "MANUAL_VERIFICATION_REQUIRED",
-      lastSuccessfulFetch: null,
-      message: reinfoConfig.apiUrl
-        ? "A REINFO endpoint is configured for this deployment."
-        : "No stable official API is configured. Registration status is verified manually and never inferred.",
+      configured: Boolean(reinfoConfig.layerUrl || reinfoConfig.apiUrl),
+      status: reinfoProbe?.ok || reinfoConfig.apiUrl ? "OK" : "MANUAL_VERIFICATION_REQUIRED",
+      lastSuccessfulFetch: reinfoProbe?.ok || reinfoConfig.apiUrl ? new Date().toISOString() : null,
+      message: reinfoProbe?.ok
+        ? `Capa oficial REINFO alcanzable: ${reinfoProbe.layerName ?? "SERV_REINFO"}. La verificacion certificada final sigue requiriendo consulta/impresion del portal MINEM por COD_REINFO o RUC.`
+        : reinfoConfig.apiUrl
+          ? "Hay un endpoint REINFO configurado para esta instalacion."
+          : "No hay capa oficial REINFO configurada. La verificacion registral queda como manual.",
     };
 
     const copernicus: SourceHealth = {
