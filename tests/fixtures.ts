@@ -5,6 +5,7 @@ import type { MiningRightRecord } from "@/lib/sources/ingemmet";
 import type { ProtectedAreaRecord } from "@/lib/sources/sernanp";
 import type { ReinfoRecord } from "@/lib/sources/reinfo";
 import type { SatelliteSceneRecord } from "@/lib/sources/copernicus";
+import type { ContextRecord } from "@/lib/sources/context";
 import type { EvidenceBundle } from "@/lib/sources/collect";
 import type { CorpusBasis, EvidenceBasisMode } from "@/types/corpus";
 import { overlap, summarize } from "@/lib/geo/measure";
@@ -144,6 +145,8 @@ export interface BundleOverrides {
   protectedAreas?: SourceResult<ProtectedAreaRecord>;
   reinfo?: SourceResult<ReinfoRecord>;
   satellite?: SourceResult<SatelliteSceneRecord>;
+  territorial?: SourceResult<ContextRecord>;
+  water?: SourceResult<ContextRecord>;
   basisMode?: EvidenceBasisMode;
   corpusBasis?: CorpusBasis[];
 }
@@ -154,6 +157,8 @@ export function makeBundle(overrides: BundleOverrides = {}): EvidenceBundle {
   const reinfo = overrides.reinfo ?? emptySource<ReinfoRecord>("reinfo", "MANUAL_VERIFICATION_REQUIRED");
   const satellite =
     overrides.satellite ?? emptySource<SatelliteSceneRecord>("copernicus", "NOT_CONFIGURED");
+  const territorial = overrides.territorial ?? emptySource<ContextRecord>("bdpi", "NOT_CONFIGURED");
+  const water = overrides.water ?? emptySource<ContextRecord>("ana", "NOT_CONFIGURED");
 
   return {
     aoi: AOI,
@@ -162,12 +167,16 @@ export function makeBundle(overrides: BundleOverrides = {}): EvidenceBundle {
     protectedAreas,
     reinfo,
     satellite,
+    territorial,
+    water,
     collectedAt: FETCHED_AT,
     evidence: [
       evidence("ev_ingemmet_status", "ingemmet", miningRights.status, "source_status"),
       evidence("ev_sernanp_status", "sernanp", protectedAreas.status, "source_status"),
       evidence("ev_reinfo_status", "reinfo", reinfo.status, "source_status"),
       evidence("ev_copernicus_status", "copernicus", satellite.status, "source_status"),
+      evidence("ev_bdpi_status", "bdpi", territorial.status, "source_status"),
+      evidence("ev_ana_status", "ana", water.status, "source_status"),
       ...miningRights.records.map((_, i) =>
         evidence(`ev_ingemmet_right_${i}`, "ingemmet", miningRights.status, "finding"),
       ),

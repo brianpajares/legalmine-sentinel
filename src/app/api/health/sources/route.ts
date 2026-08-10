@@ -10,6 +10,7 @@ import {
 import { getStore } from "@/lib/store";
 import { ok, serverError } from "@/lib/api/respond";
 import { RULE_VERSION } from "@/lib/rules/v1";
+import { sourceRegistry } from "@/lib/sources/registry";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -110,6 +111,10 @@ export async function GET() {
           : "Durable storage configured.",
       },
       sources,
+      registry: {
+        driveFileId: process.env.GOOGLE_DRIVE_SOURCE_REGISTRY_FILE_ID ?? null,
+        entries: sourceRegistry(),
+      },
       summary: {
         connected: sources.filter((s) => s.status === "OK").length,
         total: sources.length,

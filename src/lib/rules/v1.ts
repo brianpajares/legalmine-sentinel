@@ -415,16 +415,44 @@ const TERRITORIAL_CONTEXT: Rule = {
   weight: 1,
   requiredSource: "bdpi",
   evaluate(bundle) {
-    return unavailable(bundle, "bdpi", "NOT_CONFIGURED", {
-      key: "territorial_context",
-      label: "Territorial context",
-      reason:
-        "No territorial-context layer is configured for this deployment, so proximity to officially recorded communities was not evaluated.",
-      blockedConclusion:
-        "No statement can be made about communities, indigenous peoples' territories or other official territorial boundaries near this area.",
-      suggestedAction:
-        "Consult the Ministry of Culture BDPI geoportal for this area and record the result, or configure BDPI_LAYER_URL.",
-    });
+    const source = bundle.territorial;
+    if (!isConclusive(source.status)) {
+      return unavailable(bundle, "bdpi", source.status, {
+        key: "territorial_context",
+        label: "Territorial context",
+        reason:
+          "No territorial-context layer produced a usable answer, so proximity to officially recorded communities was not evaluated.",
+        blockedConclusion:
+          "No statement can be made about communities, indigenous peoples' territories or other official territorial boundaries near this area.",
+        suggestedAction:
+          "Consult the Ministry of Culture BDPI map for this area and record the result, or configure BDPI_LAYER_URL.",
+      });
+    }
+
+    const overlapping = source.records.filter((record) => record.overlapHectares > 0);
+    if (overlapping.length === 0) {
+      return {
+        factorScore: 5,
+        rationale:
+          "The configured territorial context layers returned no community polygon intersecting the area of interest. This lowers social-territorial screening concern, but it does not replace BDPI/manual stakeholder verification.",
+        evidenceIds: evidenceIdsFor(bundle, "bdpi"),
+        dataStatus: source.status,
+        inconclusive: false,
+        nextStep: "Confirm the result in the BDPI interactive map before relying on it for legal or engagement planning.",
+      };
+    }
+
+    const names = overlapping.map((record) => record.label ?? "unnamed record");
+    return {
+      factorScore: 65,
+      rationale:
+        `${overlapping.length} territorial context record(s) intersect the area of interest: ${names.join(", ")}. ` +
+        "This is a screening signal for consultation and stakeholder mapping, not a legal conclusion.",
+      evidenceIds: evidenceIdsFor(bundle, "bdpi"),
+      dataStatus: source.status,
+      inconclusive: false,
+      nextStep: "Verify the record in BDPI/official community registries and document any consultation obligations separately.",
+    };
   },
 };
 
@@ -436,16 +464,44 @@ const WATER_CONTEXT: Rule = {
   weight: 1,
   requiredSource: "ana",
   evaluate(bundle) {
-    return unavailable(bundle, "ana", "NOT_CONFIGURED", {
-      key: "water_context",
-      label: "Water context",
-      reason:
-        "No water-resources layer is configured for this deployment, so water bodies and management boundaries were not evaluated.",
-      blockedConclusion:
-        "No statement can be made about rivers, water bodies or hydrological management constraints affecting this area.",
-      suggestedAction:
-        "Consult the ANA geoportal / SNIRH for this area and record the result, or configure ANA_LAYER_URL.",
-    });
+    const source = bundle.water;
+    if (!isConclusive(source.status)) {
+      return unavailable(bundle, "ana", source.status, {
+        key: "water_context",
+        label: "Water context",
+        reason:
+          "No water-resources context layer produced a usable answer, so water bodies and management boundaries were not evaluated.",
+        blockedConclusion:
+          "No statement can be made about rivers, water bodies or hydrological management constraints affecting this area.",
+        suggestedAction:
+          "Consult the ANA geoportal / SNIRH for this area and record the result, or configure ANA_LAYER_URL.",
+      });
+    }
+
+    const overlapping = source.records.filter((record) => record.overlapHectares > 0);
+    if (overlapping.length === 0) {
+      return {
+        factorScore: 5,
+        rationale:
+          "The configured water-context layers returned no intersecting record for this area. This does not establish absence of water rights, permits or field constraints.",
+        evidenceIds: evidenceIdsFor(bundle, "ana"),
+        dataStatus: source.status,
+        inconclusive: false,
+        nextStep: "Confirm water rights, discharges, availability and field hydrology directly with ANA/SNIRH before investment action.",
+      };
+    }
+
+    return {
+      factorScore: 20,
+      rationale:
+        `${overlapping.length} ANA water-management context record(s) intersect the area of interest: ` +
+        `${overlapping.map((record) => record.label ?? "unnamed record").join(", ")}. ` +
+        "These records identify the relevant hydrological/administrative context; they are not themselves a water-rights risk finding.",
+      evidenceIds: evidenceIdsFor(bundle, "ana"),
+      dataStatus: source.status,
+      inconclusive: false,
+      nextStep: "Use the reported AAA/ALA/unit names to check water availability, authorizations and discharge records in ANA/SNIRH.",
+    };
   },
 };
 

@@ -116,6 +116,18 @@ const DEFAULT_SERNANP_LAYER_URLS = [
   "https://geoservicios.sernanp.gob.pe/arcgis/rest/services/servicios_ogc/peru_sernanp_0214/MapServer/0",
 ];
 
+const DEFAULT_BDPI_LAYER_URLS = [
+  "https://www.idep.gob.pe/geoportal/rest/services/INSTITUCIONALES/COMUNIDADES_NATIVAS/FeatureServer/0",
+  "https://www.idep.gob.pe/geoportal/rest/services/INSTITUCIONALES/COMUNIDADES_NATIVAS/FeatureServer/1",
+];
+
+const DEFAULT_ANA_LAYER_URLS = [
+  "https://geoservicios.sernanp.gob.pe/arcgis/rest/services/sernanp_visor/servicio_descarga/MapServer/25",
+  "https://geoservicios.sernanp.gob.pe/arcgis/rest/services/sernanp_visor/servicio_descarga/MapServer/26",
+  "https://geoservicios.sernanp.gob.pe/arcgis/rest/services/sernanp_visor/servicio_descarga/MapServer/27",
+  "https://geoservicios.sernanp.gob.pe/arcgis/rest/services/sernanp_visor/servicio_descarga/MapServer/28",
+];
+
 export interface ArcGisLayerConfig {
   /** Full layer URL, e.g. .../MapServer/0 — the adapter appends /query. */
   layerUrl?: string;
@@ -160,11 +172,11 @@ export const arcgisConfig = {
     };
   },
   get ana(): ArcGisLayerConfig {
-    const layerUrls = csvEnv("ANA_LAYER_URL") ?? [];
+    const layerUrls = csvEnv("ANA_LAYER_URL") ?? DEFAULT_ANA_LAYER_URLS;
     return { layerUrl: layerUrls[0], layerUrls, fromEnv: Boolean(env("ANA_LAYER_URL")), fields: {} };
   },
   get bdpi(): ArcGisLayerConfig {
-    const layerUrls = csvEnv("BDPI_LAYER_URL") ?? [];
+    const layerUrls = csvEnv("BDPI_LAYER_URL") ?? DEFAULT_BDPI_LAYER_URLS;
     return { layerUrl: layerUrls[0], layerUrls, fromEnv: Boolean(env("BDPI_LAYER_URL")), fields: {} };
   },
 };
@@ -174,7 +186,7 @@ export const copernicusConfig = {
     return env("COPERNICUS_STAC_URL") ?? "https://catalogue.dataspace.copernicus.eu/stac";
   },
   get enabled(): boolean {
-    return env("COPERNICUS_ENABLED") === "true" || Boolean(env("COPERNICUS_STAC_URL"));
+    return env("COPERNICUS_ENABLED") !== "false";
   },
 };
 

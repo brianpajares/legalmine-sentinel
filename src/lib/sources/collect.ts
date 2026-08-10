@@ -12,6 +12,7 @@ import { fetchMiningRights, type MiningRightRecord } from "./ingemmet";
 import { fetchProtectedAreas, type ProtectedAreaRecord } from "./sernanp";
 import { fetchReinfoStatus, type ReinfoRecord } from "./reinfo";
 import { searchSentinelScenes, type SatelliteSceneRecord } from "./copernicus";
+import { fetchContextLayers, type ContextRecord } from "./context";
 import { SOURCE_DEFINITIONS } from "./config";
 
 /**
@@ -28,6 +29,8 @@ export interface EvidenceBundle {
   protectedAreas: SourceResult<ProtectedAreaRecord>;
   reinfo: SourceResult<ReinfoRecord>;
   satellite: SourceResult<SatelliteSceneRecord>;
+  territorial: SourceResult<ContextRecord>;
+  water: SourceResult<ContextRecord>;
   evidence: Evidence[];
   collectedAt: string;
   /** How the cadastral and protected-area answers were sourced. */
@@ -152,6 +155,29 @@ function satelliteEvidence(
   };
 }
 
+function contextEvidence(
+  result: SourceResult<ContextRecord>,
+  record: ContextRecord,
+): Evidence {
+  const key = record.label ?? JSON.stringify(record.raw).slice(0, 64);
+  return {
+    ...baseEvidence(result, `context:${key}`, "finding"),
+    title: `${result.sourceName} — ${record.label ?? "context record"}`,
+    detail:
+      `${record.category ? `Category/source field: ${record.category}. ` : ""}` +
+      `Intersects ${record.overlapPercentOfAoi}% of the area of interest (${record.overlapHectares} ha).`,
+    geometry: record.geometry,
+    metadata: {
+      label: record.label,
+      category: record.category,
+      sourceLabel: record.sourceLabel,
+      overlapHectares: record.overlapHectares,
+      overlapPercentOfAoi: record.overlapPercentOfAoi,
+      raw: record.raw,
+    },
+  };
+}
+
 export interface CollectOptions {
   /** Identifier used for the REINFO lookup, when one is configured. */
   reinfoQuery?: string;
@@ -221,7 +247,7 @@ export async function collectEvidence(
   const preferred: EvidenceBasisMode =
     options.basis ?? (process.env.CORPUS_MODE === "live" ? "live" : "corpus");
 
-  const [basis, reinfo, satellite] = await Promise.all([
+  const [basis, reinfo, satellite, territorial, water] = await Promise.all([
     resolveBasis(aoi, preferred),
     fetchReinfoStatus(options.reinfoQuery),
     includeSatellite
@@ -236,6 +262,8 @@ export async function collectEvidence(
           records: [],
           warnings: ["Satellite search was skipped for this assessment."],
         }),
+    fetchContextLayers("bdpi", aoi),
+    fetchContextLayers("ana", aoi),
   ]);
 
   const { miningRights, protectedAreas } = basis;
@@ -245,6 +273,8 @@ export async function collectEvidence(
     statusEvidence(protectedAreas, "protected areas"),
     statusEvidence(reinfo, "REINFO registration"),
     statusEvidence(satellite, "satellite scenes"),
+    statusEvidence(territorial, "territorial context"),
+    statusEvidence(water, "water context"),
   ];
 
   for (const record of miningRights.records) {
@@ -265,6 +295,12 @@ export async function collectEvidence(
     evidence.push(satelliteEvidence(satellite, sorted[0], "before"));
     evidence.push(satelliteEvidence(satellite, sorted[sorted.length - 1], "after"));
   }
+  for (const record of territorial.records) {
+    evidence.push(contextEvidence(territorial, record));
+  }
+  for (const record of water.records) {
+    evidence.push(contextEvidence(water, record));
+  }
 
   return {
     aoi,
@@ -273,6 +309,8 @@ export async function collectEvidence(
     protectedAreas,
     reinfo,
     satellite,
+    territorial,
+    water,
     evidence,
     collectedAt: new Date().toISOString(),
     basisMode: basis.mode,
@@ -281,7 +319,14 @@ export async function collectEvidence(
 }
 
 export function allSourceResults(bundle: EvidenceBundle): SourceResult<unknown>[] {
-  return [bundle.miningRights, bundle.protectedAreas, bundle.reinfo, bundle.satellite];
+  return [
+    bundle.miningRights,
+    bundle.protectedAreas,
+    bundle.reinfo,
+    bundle.satellite,
+    bundle.territorial,
+    bundle.water,
+  ];
 }
 
 export function summarizeSources(bundle: EvidenceBundle): SourceStatusSummary[] {
