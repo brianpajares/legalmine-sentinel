@@ -19,6 +19,8 @@ import { headline } from "@/lib/scoring/engine";
 const OVERLAY_COLORS: Record<string, string> = {
   ingemmet: "#3b82f6",
   sernanp: "#10b981",
+  bdpi: "#f59e0b",
+  ana: "#06b6d4",
 };
 
 export default function Dossier({
@@ -260,16 +262,31 @@ export default function Dossier({
         />
       </Section>
 
-      <Section number={6} title="Territorial & water context">
+      <Section number={6} title="REINFO formalization screening">
+        <div className="mb-4 rounded-lg border border-blue-500/25 bg-blue-500/10 px-4 py-3 print-surface">
+          <p className="text-xs font-semibold text-blue-100">Official spatial layer + certified portal check</p>
+          <p className="mt-1 text-[11px] leading-relaxed text-blue-100/80">
+            This section uses the MINEM REINFO spatial layer published through GEOCATMIN to identify
+            declared REINFO coordinates intersecting the AOI. For a certified dossier, each COD_REINFO
+            or RUC should still be printed from the MINEM REINFO portal and attached.
+          </p>
+        </div>
+        <EvidenceList
+          items={findings("reinfo")}
+          emptyMessage="The official REINFO spatial layer returned no declared REINFO coordinate intersecting the AOI, or the layer could not be queried. See the source table above for which applies."
+        />
+      </Section>
+
+      <Section number={7} title="Territorial & water context">
         <p className="text-xs leading-relaxed text-gray-400 print-muted">
           {assessment.missingChecks.some((c) => c.key === "territorial_context" || c.key === "water_context")
-            ? "Territorial and water-resource layers were not evaluated in this assessment. The specific gaps and the actions that would close them are listed in section 9."
+            ? "Territorial and water-resource layers were not evaluated in this assessment. The specific gaps and the actions that would close them are listed in section 10."
             : "See the evidence records below."}
         </p>
         <EvidenceList items={[...findings("bdpi"), ...findings("ana")]} emptyMessage="" />
       </Section>
 
-      <Section number={7} title="Satellite change evidence">
+      <Section number={8} title="Satellite change evidence">
         <EvidenceList
           items={findings("copernicus")}
           emptyMessage="No satellite scene was catalogued for this assessment. No substitute or illustrative imagery is generated: when the catalogue is unavailable or returns too few usable scenes, this section stays empty."
@@ -280,7 +297,7 @@ export default function Dossier({
         </p>
       </Section>
 
-      <Section number={8} title="Risk breakdown">
+      <Section number={9} title="Risk breakdown">
         <table className="w-full text-left text-[11px]">
           <thead className="border-b border-white/15 text-[10px] uppercase tracking-wider text-gray-500">
             <tr>
@@ -350,7 +367,7 @@ export default function Dossier({
         </p>
       </Section>
 
-      <Section number={9} title="Due-diligence gaps">
+      <Section number={10} title="Due-diligence gaps">
         {assessment.missingChecks.length === 0 ? (
           <p className="text-xs text-gray-400 print-muted">
             Every configured check was evaluated with live data for this assessment.
@@ -375,10 +392,10 @@ export default function Dossier({
         )}
       </Section>
 
-      <Section number={10} title="Recommended next steps">
+      <Section number={11} title="Recommended next steps">
         <ol className="space-y-2 text-xs leading-relaxed text-gray-300">
           <li>
-            1. Close the gaps in section 9 before this screening informs a commitment; each one names
+            1. Close the gaps in section 10 before this screening informs a commitment; each one names
             the conclusion it currently blocks.
           </li>
           {assessment.factors
@@ -399,7 +416,21 @@ export default function Dossier({
         </ol>
       </Section>
 
-      <Section number={11} title="Appendix — evidence register">
+      <Section number={12} title="Commercial packaging">
+        <div className="grid gap-3 sm:grid-cols-3">
+          <Stat label="Certified dossier" value="$199" sub="per issued report" />
+          <Stat label="Monitoring" value="$49" sub="per area / month" />
+          <Stat label="Platform" value="$299" sub="monthly access" />
+        </div>
+        <p className="mt-4 text-xs leading-relaxed text-gray-400 print-muted">
+          The screening is sold once; monitoring is recurring. Each month the system compares the
+          current source snapshots against the prior period and reports whether new rights,
+          protected-area changes, REINFO records or context-layer changes touch the watched AOI. A
+          quiet month is still a reportable finding: nothing changed in the checked corpus.
+        </p>
+      </Section>
+
+      <Section number={13} title="Appendix — evidence register">
         <table className="w-full text-left text-[10px]">
           <thead className="border-b border-white/15 uppercase tracking-wider text-gray-500">
             <tr>

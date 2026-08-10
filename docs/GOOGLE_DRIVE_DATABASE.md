@@ -38,5 +38,6 @@ The Drive file is JSON with immutable evidence payloads as emitted by the assess
 - `feedback`
 - `leads`
 - `reportEvents`
+- `source registry metadata`, including REINFO snapshot policy and source URLs
 
 This keeps the dossier re-openable because the assessment contains its evidence IDs, source status, corpus basis and geometry fingerprint. Missing source data remains explicit; Drive persistence does not fabricate source answers.

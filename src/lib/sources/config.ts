@@ -128,6 +128,9 @@ const DEFAULT_ANA_LAYER_URLS = [
   "https://geoservicios.sernanp.gob.pe/arcgis/rest/services/sernanp_visor/servicio_descarga/MapServer/28",
 ];
 
+const DEFAULT_REINFO_LAYER_URL =
+  "https://geocatmin.ingemmet.gob.pe/arcgis/rest/services/SERV_REINFO/MapServer/0";
+
 export interface ArcGisLayerConfig {
   /** Full layer URL, e.g. .../MapServer/0 — the adapter appends /query. */
   layerUrl?: string;
@@ -191,6 +194,9 @@ export const copernicusConfig = {
 };
 
 export const reinfoConfig = {
+  get layerUrl(): string | undefined {
+    return env("REINFO_LAYER_URL") ?? DEFAULT_REINFO_LAYER_URL;
+  },
   /** Only set this when a stable official interface has been confirmed. Never scrape silently. */
   get apiUrl(): string | undefined {
     return env("REINFO_API_URL");

@@ -281,24 +281,29 @@ const REINFO_CHECK: Rule = {
     const found = source.records.filter((r) => r.found);
     if (found.length === 0) {
       return {
-        factorScore: 55,
+        factorScore: 15,
         rationale:
-          "The configured REINFO lookup returned no matching record for the identifier supplied. This is a verification gap to resolve, not a finding of illegality.",
+          "The official REINFO spatial layer returned no declared REINFO coordinate intersecting the area of interest. This reduces formalization-registry concern for the AOI, but it is not proof that no operator has registration elsewhere or under another identifier.",
         evidenceIds: evidenceIdsFor(bundle, "reinfo"),
         dataStatus: source.status,
         inconclusive: false,
-        nextStep: "Confirm the identifier used for the query and repeat the search in the official portal.",
+        nextStep: "Confirm by searching the MINEM REINFO portal using holder/RUC/right identifiers from any overlapping mining rights.",
       };
     }
 
     const statuses = found.map((r) => r.status ?? "not reported");
-    const suspended = statuses.some((s) => /suspend|inactiv|excluid/i.test(s));
+    const suspended = statuses.some((s) => /suspend|inactiv|excluid|cancel|baja/i.test(s));
+    const vigente = statuses.some((s) => /vigente|activo/i.test(s));
     return {
-      factorScore: suspended ? 70 : 25,
-      rationale: `REINFO returned ${found.length} record(s) with status: ${statuses.join(", ")}.`,
+      factorScore: suspended ? 70 : vigente ? 35 : 50,
+      rationale:
+        `The official REINFO layer returned ${found.length} declared coordinate record(s) intersecting the AOI. ` +
+        `Published statuses: ${statuses.join(", ")}.`,
       evidenceIds: evidenceIdsFor(bundle, "reinfo"),
       dataStatus: source.status,
       inconclusive: false,
+      nextStep:
+        "Print/attach the corresponding MINEM REINFO portal result for each COD_REINFO/RUC before relying on the status.",
     };
   },
 };

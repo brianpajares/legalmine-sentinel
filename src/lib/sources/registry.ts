@@ -67,11 +67,15 @@ export function sourceRegistry(): SourceRegistryEntry[] {
     },
     {
       sourceKey: "reinfo",
-      cadence: "manual",
+      cadence: "monthly",
       updatePolicy:
-        "No stable official automated API is used. The dossier records REINFO as manual verification required unless a verified endpoint is configured.",
-      driveStore: "not-stored",
-      urls: ["https://pad.minem.gob.pe/REINFO_WEB/Index.aspx"],
+        "Query official MINEM REINFO spatial layer through GEOCATMIN for AOI screening and retain monthly snapshot metadata in Drive. The MINEM portal remains the manual final check for each COD_REINFO/RUC.",
+      driveStore: "source-registry",
+      staleWhenNotPeriod: current,
+      urls: [
+        "https://geocatmin.ingemmet.gob.pe/arcgis/rest/services/SERV_REINFO/MapServer/0",
+        "https://pad.minem.gob.pe/REINFO_WEB/Index.aspx",
+      ],
     },
     {
       sourceKey: "copernicus",

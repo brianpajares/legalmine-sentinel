@@ -178,6 +178,35 @@ function contextEvidence(
   };
 }
 
+function reinfoEvidence(result: SourceResult<ReinfoRecord>, record: ReinfoRecord): Evidence {
+  const key = record.codReinfo ?? record.ruc ?? record.rightCode ?? JSON.stringify(record.raw).slice(0, 64);
+  return {
+    ...baseEvidence(result, `reinfo:${key}`, "finding"),
+    title: `REINFO ${record.codReinfo ?? "(code not reported)"} — ${record.declarant ?? "declarant not reported"}`,
+    detail:
+      `Published status: ${record.status ?? "not reported"}. ` +
+      `Right code: ${record.rightCode ?? "not reported"}. ` +
+      `RUC: ${record.ruc ?? "not reported"}. ` +
+      `Coordinate status: ${record.coordinateStatus ?? "not reported"}.`,
+    observedAt: record.updatedAt ?? undefined,
+    metadata: {
+      status: record.status,
+      declarant: record.declarant,
+      representative: record.representative,
+      ruc: record.ruc,
+      rightCode: record.rightCode,
+      rightName: record.rightName,
+      codReinfo: record.codReinfo,
+      activityType: record.activityType,
+      coordinateStatus: record.coordinateStatus,
+      updatedAt: record.updatedAt,
+      latitude: record.latitude,
+      longitude: record.longitude,
+      raw: record.raw,
+    },
+  };
+}
+
 export interface CollectOptions {
   /** Identifier used for the REINFO lookup, when one is configured. */
   reinfoQuery?: string;
@@ -249,7 +278,7 @@ export async function collectEvidence(
 
   const [basis, reinfo, satellite, territorial, water] = await Promise.all([
     resolveBasis(aoi, preferred),
-    fetchReinfoStatus(options.reinfoQuery),
+    fetchReinfoStatus(options.reinfoQuery, aoi),
     includeSatellite
       ? searchSentinelScenes(aoi)
       : Promise.resolve<SourceResult<SatelliteSceneRecord>>({
@@ -294,6 +323,9 @@ export async function collectEvidence(
   if (sorted.length >= 2) {
     evidence.push(satelliteEvidence(satellite, sorted[0], "before"));
     evidence.push(satelliteEvidence(satellite, sorted[sorted.length - 1], "after"));
+  }
+  for (const record of reinfo.records) {
+    evidence.push(reinfoEvidence(reinfo, record));
   }
   for (const record of territorial.records) {
     evidence.push(contextEvidence(territorial, record));
