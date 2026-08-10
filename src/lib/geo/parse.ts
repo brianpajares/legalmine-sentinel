@@ -5,6 +5,7 @@ import type {
   PolygonGeometry,
   Position,
 } from "@/types/geo";
+import { inflateRawSync } from "node:zlib";
 
 export class AoiParseError extends Error {
   constructor(message: string) {
@@ -14,6 +15,7 @@ export class AoiParseError extends Error {
 }
 
 const MAX_VERTICES = 20_000;
+const MAX_KMZ_BYTES = 12 * 1024 * 1024;
 
 function isFiniteNumber(n: unknown): n is number {
   return typeof n === "number" && Number.isFinite(n);
@@ -321,6 +323,98 @@ export function parseAoiFromText(text: string, filename?: string): ParsedAoi {
 
   assertSize(result.geometry);
   return { geometry: result.geometry, name: result.name, format, warnings };
+}
+
+function readUInt16(buffer: Buffer, offset: number): number {
+  if (offset + 2 > buffer.length) throw new AoiParseError("The KMZ archive is truncated.");
+  return buffer.readUInt16LE(offset);
+}
+
+function readUInt32(buffer: Buffer, offset: number): number {
+  if (offset + 4 > buffer.length) throw new AoiParseError("The KMZ archive is truncated.");
+  return buffer.readUInt32LE(offset);
+}
+
+function decodeZipName(raw: Buffer, flags: number): string {
+  return flags & 0x0800 ? raw.toString("utf8") : raw.toString("latin1");
+}
+
+function findEndOfCentralDirectory(buffer: Buffer): number {
+  const min = Math.max(0, buffer.length - 65_557);
+  for (let offset = buffer.length - 22; offset >= min; offset -= 1) {
+    if (readUInt32(buffer, offset) === 0x06054b50) return offset;
+  }
+  throw new AoiParseError("The KMZ archive has no readable ZIP directory.");
+}
+
+function extractFirstKmlFromKmz(buffer: Buffer): { text: string; filename: string } {
+  if (buffer.length === 0) throw new AoiParseError("The uploaded KMZ file is empty.");
+  if (buffer.length > MAX_KMZ_BYTES) {
+    throw new AoiParseError(
+      `The KMZ file is ${(buffer.length / 1024 / 1024).toFixed(1)} MB. The limit is 12 MB; simplify the polygon before uploading.`,
+    );
+  }
+
+  const directoryOffset = findEndOfCentralDirectory(buffer);
+  const entryCount = readUInt16(buffer, directoryOffset + 10);
+  let cursor = readUInt32(buffer, directoryOffset + 16);
+
+  for (let i = 0; i < entryCount; i += 1) {
+    if (readUInt32(buffer, cursor) !== 0x02014b50) {
+      throw new AoiParseError("The KMZ archive directory is malformed.");
+    }
+    const flags = readUInt16(buffer, cursor + 8);
+    const method = readUInt16(buffer, cursor + 10);
+    const compressedSize = readUInt32(buffer, cursor + 20);
+    const uncompressedSize = readUInt32(buffer, cursor + 24);
+    const nameLength = readUInt16(buffer, cursor + 28);
+    const extraLength = readUInt16(buffer, cursor + 30);
+    const commentLength = readUInt16(buffer, cursor + 32);
+    const localHeaderOffset = readUInt32(buffer, cursor + 42);
+    const name = decodeZipName(buffer.subarray(cursor + 46, cursor + 46 + nameLength), flags);
+
+    if (!name.endsWith("/") && name.toLowerCase().endsWith(".kml")) {
+      if (readUInt32(buffer, localHeaderOffset) !== 0x04034b50) {
+        throw new AoiParseError(`The KMZ entry ${name} has a malformed local header.`);
+      }
+      const localNameLength = readUInt16(buffer, localHeaderOffset + 26);
+      const localExtraLength = readUInt16(buffer, localHeaderOffset + 28);
+      const dataStart = localHeaderOffset + 30 + localNameLength + localExtraLength;
+      const dataEnd = dataStart + compressedSize;
+      if (dataEnd > buffer.length) throw new AoiParseError(`The KMZ entry ${name} is truncated.`);
+
+      const compressed = buffer.subarray(dataStart, dataEnd);
+      let kml: Buffer;
+      if (method === 0) {
+        kml = compressed;
+      } else if (method === 8) {
+        kml = inflateRawSync(compressed);
+      } else {
+        throw new AoiParseError(
+          `The KMZ entry ${name} uses ZIP compression method ${method}, which is not supported.`,
+        );
+      }
+      if (uncompressedSize > 0 && kml.length !== uncompressedSize) {
+        throw new AoiParseError(`The KMZ entry ${name} did not decompress cleanly.`);
+      }
+      return { text: kml.toString("utf8"), filename: name };
+    }
+
+    cursor += 46 + nameLength + extraLength + commentLength;
+  }
+
+  throw new AoiParseError("No .kml document was found inside the KMZ archive.");
+}
+
+/** Parses a compressed .kmz upload into the same normalized AOI as KML. */
+export function parseAoiFromKmz(buffer: Buffer): ParsedAoi {
+  const { text, filename } = extractFirstKmlFromKmz(buffer);
+  const parsed = parseAoiFromText(text, filename);
+  return {
+    ...parsed,
+    format: "kmz",
+    warnings: [`KMZ archive read successfully; geometry came from ${filename}.`, ...parsed.warnings],
+  };
 }
 
 /**

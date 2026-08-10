@@ -7,7 +7,8 @@ import type { Assessment, Lead, PilotFeedback, Project } from "@/types/assessmen
  * runs with zero configuration. That store is ephemeral, and the app says so
  * out loud rather than implying durability it does not have. Point
  * SUPABASE_URL / SUPABASE_SERVICE_ROLE_KEY at a project with the bundled
- * migration applied and the same interface becomes durable.
+ * migration applied, or configure the Google Drive store, and the same
+ * interface becomes durable.
  */
 
 export interface TractionMetrics {
@@ -23,7 +24,7 @@ export interface TractionMetrics {
 }
 
 export interface Store {
-  kind: "memory" | "supabase";
+  kind: "memory" | "supabase" | "drive";
   /** True when data is lost on restart. Surfaced in /api/health. */
   ephemeral: boolean;
   saveProject(project: Project): Promise<Project>;
@@ -62,6 +63,21 @@ export async function getStore(): Promise<Store> {
   if (url && key) {
     const { createSupabaseStore } = await import("./supabase");
     cached = createSupabaseStore(url, key);
+  } else if (
+    process.env.GOOGLE_DRIVE_CLIENT_ID?.trim() &&
+    process.env.GOOGLE_DRIVE_CLIENT_SECRET?.trim() &&
+    process.env.GOOGLE_DRIVE_REFRESH_TOKEN?.trim()
+  ) {
+    const { createGoogleDriveStore } = await import("./google-drive");
+    cached = createGoogleDriveStore({
+      clientId: process.env.GOOGLE_DRIVE_CLIENT_ID,
+      clientSecret: process.env.GOOGLE_DRIVE_CLIENT_SECRET,
+      refreshToken: process.env.GOOGLE_DRIVE_REFRESH_TOKEN,
+      folderId: process.env.GOOGLE_DRIVE_DB_FOLDER_ID,
+      folderName: process.env.GOOGLE_DRIVE_DB_FOLDER_NAME,
+      fileName: process.env.GOOGLE_DRIVE_DB_FILE_NAME,
+      ownerEmail: process.env.GOOGLE_DRIVE_OWNER_EMAIL,
+    });
   } else {
     const { createMemoryStore } = await import("./memory");
     cached = createMemoryStore();

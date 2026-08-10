@@ -15,7 +15,17 @@ interface CreateAssessmentProps {
   busy: boolean;
 }
 
-const MAX_FILE_BYTES = 8 * 1024 * 1024;
+const MAX_FILE_BYTES = 12 * 1024 * 1024;
+
+function arrayBufferToBase64(buffer: ArrayBuffer): string {
+  let binary = "";
+  const bytes = new Uint8Array(buffer);
+  const chunkSize = 0x8000;
+  for (let i = 0; i < bytes.length; i += chunkSize) {
+    binary += String.fromCharCode(...bytes.subarray(i, i + chunkSize));
+  }
+  return window.btoa(binary);
+}
 
 export default function CreateAssessment({
   demoMode,
@@ -26,6 +36,7 @@ export default function CreateAssessment({
   const [name, setName] = useState("");
   const [fileName, setFileName] = useState<string | null>(null);
   const [fileText, setFileText] = useState<string | null>(null);
+  const [fileBase64, setFileBase64] = useState<string | null>(null);
   const [latitude, setLatitude] = useState("");
   const [longitude, setLongitude] = useState("");
   const [radius, setRadius] = useState("1000");
@@ -38,11 +49,17 @@ export default function CreateAssessment({
     if (!file) return;
     setError(null);
     if (file.size > MAX_FILE_BYTES) {
-      setError(`That file is ${(file.size / 1024 / 1024).toFixed(1)} MB. The limit is 8 MB — simplify the polygon before uploading.`);
+      setError(`That file is ${(file.size / 1024 / 1024).toFixed(1)} MB. The limit is 12 MB; simplify the polygon before uploading.`);
       return;
     }
-    const text = await file.text();
-    setFileText(text);
+    const extension = file.name.toLowerCase().split(".").pop();
+    if (extension === "kmz") {
+      setFileBase64(arrayBufferToBase64(await file.arrayBuffer()));
+      setFileText(null);
+    } else {
+      setFileText(await file.text());
+      setFileBase64(null);
+    }
     setFileName(file.name);
     if (!name.trim()) setName(file.name.replace(/\.[^/.]+$/, ""));
     track("geometry_uploaded", { format: file.name.split(".").pop(), bytes: file.size });
@@ -83,11 +100,16 @@ export default function CreateAssessment({
       return;
     }
     if (mode === "file") {
-      if (!fileText) {
-        setError("Upload a .geojson or .kml file that contains the area of interest.");
+      if (!fileText && !fileBase64) {
+        setError("Upload a .geojson, .kml or .kmz file that contains the area of interest.");
         return;
       }
-      void createProject({ name, geometryText: fileText, filename: fileName });
+      void createProject({
+        name,
+        geometryText: fileText,
+        geometryBase64: fileBase64,
+        filename: fileName,
+      });
       return;
     }
     const lat = Number.parseFloat(latitude);
@@ -124,7 +146,7 @@ export default function CreateAssessment({
           <div className="flex gap-2">
             {(
               [
-                { id: "file" as const, label: "Upload KML / GeoJSON", icon: Upload },
+                { id: "file" as const, label: "Upload KMZ / KML / GeoJSON", icon: Upload },
                 { id: "coordinates" as const, label: "Centre point + radius", icon: MapPin },
               ]
             ).map((option) => {
@@ -157,7 +179,7 @@ export default function CreateAssessment({
               >
                 <Upload className="h-5 w-5 text-blue-400" />
                 <span className="text-sm font-semibold text-gray-200">
-                  {fileName ?? "Choose a .geojson, .json or .kml file"}
+                  {fileName ?? "Choose a .geojson, .json, .kml or .kmz file"}
                 </span>
                 <span className="text-[11px] text-gray-500">
                   Polygons and multipolygons in WGS84 decimal degrees. Points and paths are rejected.
@@ -166,7 +188,7 @@ export default function CreateAssessment({
               <input
                 ref={fileInput}
                 type="file"
-                accept=".kml,.geojson,.json"
+                accept=".kmz,.kml,.geojson,.json"
                 onChange={handleFile}
                 className="hidden"
               />

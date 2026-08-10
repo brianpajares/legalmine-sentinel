@@ -1,7 +1,12 @@
 import { randomUUID } from "node:crypto";
 
 import type { Project } from "@/types/assessment";
-import { AoiParseError, parseAoiFromCoordinates, parseAoiFromText } from "@/lib/geo/parse";
+import {
+  AoiParseError,
+  parseAoiFromCoordinates,
+  parseAoiFromKmz,
+  parseAoiFromText,
+} from "@/lib/geo/parse";
 import { summarize } from "@/lib/geo/measure";
 import { getStore } from "@/lib/store";
 import { badRequest, created, ok, readJson, serverError } from "@/lib/api/respond";
@@ -17,6 +22,8 @@ interface CreateProjectBody {
   notes?: string;
   /** Raw contents of an uploaded .geojson / .kml file. */
   geometryText?: string;
+  /** Base64 contents of an uploaded .kmz file. */
+  geometryBase64?: string;
   filename?: string;
   /** Alternative input: a centre point plus a radius. */
   latitude?: number;
@@ -75,7 +82,12 @@ export async function POST(request: Request) {
     if (!name) return badRequest("A project name is required.");
 
     let parsed;
-    if (body.geometryText) {
+    if (body.geometryBase64 || body.filename?.toLowerCase().endsWith(".kmz")) {
+      if (!body.geometryBase64) {
+        return badRequest("KMZ uploads must be sent as base64.", undefined, "KMZ_REQUIRED");
+      }
+      parsed = parseAoiFromKmz(Buffer.from(body.geometryBase64, "base64"));
+    } else if (body.geometryText) {
       parsed = parseAoiFromText(body.geometryText, body.filename);
     } else if (
       typeof body.latitude === "number" &&
@@ -86,7 +98,7 @@ export async function POST(request: Request) {
     } else {
       return badRequest(
         "An area of interest is required.",
-        "Upload a .geojson or .kml file, or supply latitude, longitude and radiusMeters.",
+        "Upload a .geojson, .kml or .kmz file, or supply latitude, longitude and radiusMeters.",
         "AOI_REQUIRED",
       );
     }

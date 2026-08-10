@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { AoiParseError, parseAoiFromCoordinates, parseAoiFromText } from "@/lib/geo/parse";
+import { AoiParseError, parseAoiFromCoordinates, parseAoiFromKmz, parseAoiFromText } from "@/lib/geo/parse";
 import { areaHectares, geometryHash, overlap, summarize } from "@/lib/geo/measure";
 import { AOI, ANP_GEOMETRY } from "./fixtures";
 
@@ -33,6 +33,45 @@ const VALID_KML = `<?xml version="1.0" encoding="UTF-8"?>
 </coordinates></LinearRing></outerBoundaryIs></Polygon></Placemark>
 </Document></kml>`;
 
+function storedKmz(filename: string, content: string): Buffer {
+  const name = Buffer.from(filename, "utf8");
+  const data = Buffer.from(content, "utf8");
+  const local = Buffer.alloc(30);
+  local.writeUInt32LE(0x04034b50, 0);
+  local.writeUInt16LE(20, 4);
+  local.writeUInt16LE(0x0800, 6);
+  local.writeUInt16LE(0, 8);
+  local.writeUInt32LE(0, 10);
+  local.writeUInt32LE(0, 14);
+  local.writeUInt32LE(data.length, 18);
+  local.writeUInt32LE(data.length, 22);
+  local.writeUInt16LE(name.length, 26);
+
+  const centralOffset = local.length + name.length + data.length;
+  const central = Buffer.alloc(46);
+  central.writeUInt32LE(0x02014b50, 0);
+  central.writeUInt16LE(20, 4);
+  central.writeUInt16LE(20, 6);
+  central.writeUInt16LE(0x0800, 8);
+  central.writeUInt16LE(0, 10);
+  central.writeUInt32LE(0, 12);
+  central.writeUInt32LE(0, 16);
+  central.writeUInt32LE(data.length, 20);
+  central.writeUInt32LE(data.length, 24);
+  central.writeUInt16LE(name.length, 28);
+  central.writeUInt32LE(0, 42);
+
+  const centralSize = central.length + name.length;
+  const end = Buffer.alloc(22);
+  end.writeUInt32LE(0x06054b50, 0);
+  end.writeUInt16LE(1, 8);
+  end.writeUInt16LE(1, 10);
+  end.writeUInt32LE(centralSize, 12);
+  end.writeUInt32LE(centralOffset, 16);
+
+  return Buffer.concat([local, name, data, central, name, end]);
+}
+
 describe("area of interest parsing (Plan Maestro §18.1 upload tests)", () => {
   it("preserves the geometry of a valid GeoJSON upload", () => {
     const parsed = parseAoiFromText(VALID_GEOJSON, "block.geojson");
@@ -48,6 +87,14 @@ describe("area of interest parsing (Plan Maestro §18.1 upload tests)", () => {
     expect(parsed.name).toBe("Test KML block");
     const ring = (parsed.geometry as { coordinates: number[][][] }).coordinates[0];
     expect(ring[0]).toHaveLength(2);
+  });
+
+  it("parses a KMZ upload by extracting its embedded KML", () => {
+    const parsed = parseAoiFromKmz(storedKmz("doc.kml", VALID_KML));
+    expect(parsed.format).toBe("kmz");
+    expect(parsed.name).toBe("Test KML block");
+    expect(parsed.warnings.join(" ")).toMatch(/KMZ archive read successfully/i);
+    expect(areaHectares(parsed.geometry)).toBeGreaterThan(0);
   });
 
   it("produces the same geometry from equivalent GeoJSON and KML inputs", () => {

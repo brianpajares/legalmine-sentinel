@@ -99,7 +99,7 @@ export async function GET() {
         kind: store.kind,
         ephemeral: store.ephemeral,
         note: store.ephemeral
-          ? "In-memory storage: projects and assessments are lost when the server restarts. Configure SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY for durable storage."
+          ? "In-memory storage: projects and assessments are lost when the server restarts. Configure Supabase or the Google Drive store for durable storage."
           : "Durable storage configured.",
       },
       sources,

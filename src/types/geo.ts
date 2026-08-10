@@ -30,7 +30,7 @@ export interface ParsedAoi {
   /** Name found inside the file, if any. */
   name?: string;
   /** Original format detected. */
-  format: "geojson" | "kml" | "coordinates";
+  format: "geojson" | "kml" | "kmz" | "coordinates";
   /** Non-fatal notes (holes dropped, extra features ignored, ring auto-closed...). */
   warnings: string[];
 }
