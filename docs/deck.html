@@ -1,0 +1,531 @@
+<title>LegalMine Sentinel — Deck</title>
+<style>
+  :root {
+    --ground: #eff1ec;
+    --ground-2: #e5e8e1;
+    --panel: #f7f8f5;
+    --ink: #161d1a;
+    --ink-2: #37423d;
+    --muted: #69746d;
+    --rule: #cbd1c7;
+    --rule-soft: #dde1d8;
+    --accent: #0e6a4e;
+    --accent-soft: #d9e8e1;
+    --copper: #a9542b;
+    --copper-soft: #f0e0d6;
+
+    --display: Georgia, "Iowan Old Style", "Times New Roman", serif;
+    --body: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    --mono: ui-monospace, "SF Mono", "Cascadia Mono", "Roboto Mono", Menlo, monospace;
+
+    --measure: 64ch;
+    --gutter: clamp(1.25rem, 5vw, 5.5rem);
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --ground: #101613;
+      --ground-2: #161d1a;
+      --panel: #19211d;
+      --ink: #e6eae4;
+      --ink-2: #b8c2ba;
+      --muted: #8b968e;
+      --rule: #2c3833;
+      --rule-soft: #222b27;
+      --accent: #4ccb9c;
+      --accent-soft: #16302743;
+      --copper: #e0995f;
+      --copper-soft: #3a281c;
+    }
+  }
+
+  :root[data-theme="dark"] {
+    --ground: #101613;
+    --ground-2: #161d1a;
+    --panel: #19211d;
+    --ink: #e6eae4;
+    --ink-2: #b8c2ba;
+    --muted: #8b968e;
+    --rule: #2c3833;
+    --rule-soft: #222b27;
+    --accent: #4ccb9c;
+    --accent-soft: #16302743;
+    --copper: #e0995f;
+    --copper-soft: #3a281c;
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    background: var(--ground);
+    color: var(--ink);
+    font-family: var(--body);
+    font-size: 17px;
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  /* Survey sheet: a hairline coordinate grid bleeding in from the left margin. */
+  .sheet {
+    position: relative;
+    padding: clamp(3.5rem, 9vh, 7rem) var(--gutter);
+    border-bottom: 1px solid var(--rule-soft);
+    overflow: hidden;
+  }
+  .sheet::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background-image:
+      linear-gradient(to right, var(--rule-soft) 1px, transparent 1px),
+      linear-gradient(to bottom, var(--rule-soft) 1px, transparent 1px);
+    background-size: 44px 44px;
+    -webkit-mask-image: linear-gradient(to right, #000 0, transparent 190px);
+    mask-image: linear-gradient(to right, #000 0, transparent 190px);
+    opacity: 0.85;
+    pointer-events: none;
+  }
+  .sheet > * { position: relative; }
+
+  .ref {
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--muted);
+    display: flex;
+    gap: 1.25rem;
+    align-items: baseline;
+    margin-bottom: 2.25rem;
+  }
+  .ref b { color: var(--accent); font-weight: 600; }
+
+  h1, h2, h3 { font-family: var(--display); font-weight: 700; text-wrap: balance; margin: 0; }
+  h1 { font-size: clamp(2.6rem, 6.5vw, 4.75rem); line-height: 1.02; letter-spacing: -0.022em; }
+  h2 { font-size: clamp(1.85rem, 3.9vw, 2.9rem); line-height: 1.1; letter-spacing: -0.016em; }
+  h3 { font-size: 1.1rem; line-height: 1.3; }
+
+  p { margin: 0; max-width: var(--measure); color: var(--ink-2); }
+  .lede { font-size: clamp(1.08rem, 1.9vw, 1.32rem); color: var(--ink); line-height: 1.5; }
+  .stack { display: flex; flex-direction: column; gap: 1.15rem; }
+  .stack-lg { display: flex; flex-direction: column; gap: 2.25rem; }
+
+  strong { color: var(--ink); font-weight: 650; }
+
+  .cover { min-height: 86vh; display: flex; flex-direction: column; justify-content: center; }
+  .cover h1 { max-width: 18ch; }
+  .wordmark {
+    font-family: var(--mono);
+    font-size: 12px;
+    letter-spacing: 0.32em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin-bottom: 2.5rem;
+  }
+  .cover-meta {
+    margin-top: 3.25rem;
+    padding-top: 1.5rem;
+    border-top: 1px solid var(--rule);
+    display: flex;
+    flex-wrap: wrap;
+    gap: 2.5rem;
+    font-family: var(--mono);
+    font-size: 12px;
+    letter-spacing: 0.06em;
+    color: var(--muted);
+  }
+  .cover-meta span { color: var(--ink); }
+
+  .grid { display: grid; gap: 1px; background: var(--rule); border: 1px solid var(--rule); margin-top: 2.5rem; }
+  @media (min-width: 700px) { .grid-2 { grid-template-columns: 1fr 1fr; } .grid-3 { grid-template-columns: repeat(3, 1fr); } }
+  .cell { background: var(--panel); padding: 1.6rem 1.5rem; display: flex; flex-direction: column; gap: 0.6rem; }
+  .cell p { font-size: 0.95rem; }
+  .tag {
+    font-family: var(--mono);
+    font-size: 10.5px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--accent);
+  }
+  .tag-copper { color: var(--copper); }
+
+  .metric { font-family: var(--display); font-size: clamp(2.1rem, 4.5vw, 3rem); line-height: 1; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; }
+
+  .callout {
+    margin-top: 2.5rem;
+    border-left: 3px solid var(--accent);
+    background: var(--accent-soft);
+    padding: 1.4rem 1.6rem;
+  }
+  .callout p { max-width: 58ch; color: var(--ink); }
+  .callout-copper { border-left-color: var(--copper); background: var(--copper-soft); }
+
+  .flow { list-style: none; margin: 2.5rem 0 0; padding: 0; display: grid; gap: 1px; background: var(--rule); border: 1px solid var(--rule); }
+  @media (min-width: 860px) { .flow { grid-template-columns: repeat(4, 1fr); } }
+  .flow li { background: var(--panel); padding: 1.5rem; display: flex; flex-direction: column; gap: 0.55rem; }
+  .flow .step { font-family: var(--mono); font-size: 11px; letter-spacing: 0.14em; color: var(--muted); }
+  .flow h3 { font-size: 1.02rem; }
+  .flow p { font-size: 0.92rem; }
+
+  table { border-collapse: collapse; width: 100%; margin-top: 2.25rem; font-size: 0.93rem; }
+  .scroll-x { overflow-x: auto; }
+  th, td { text-align: left; padding: 0.8rem 1rem; border-bottom: 1px solid var(--rule-soft); vertical-align: top; }
+  th { font-family: var(--mono); font-size: 10.5px; letter-spacing: 0.13em; text-transform: uppercase; color: var(--muted); font-weight: 600; border-bottom-color: var(--rule); }
+  td:first-child { color: var(--ink); font-weight: 600; }
+  .num { font-family: var(--mono); font-variant-numeric: tabular-nums; }
+
+  .checks { list-style: none; margin: 2.25rem 0 0; padding: 0; display: flex; flex-direction: column; gap: 0.7rem; max-width: var(--measure); }
+  .checks li { display: flex; gap: 0.85rem; align-items: baseline; font-size: 0.96rem; color: var(--ink-2); }
+  .checks .mark { font-family: var(--mono); color: var(--accent); flex: none; }
+
+  figure { margin: 2.5rem 0 0; }
+  figcaption { font-family: var(--mono); font-size: 11px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); margin-top: 0.9rem; }
+  svg { display: block; width: 100%; height: auto; }
+
+  a { color: var(--accent); text-underline-offset: 3px; }
+  a:focus-visible, [tabindex]:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+
+  footer { padding: 3rem var(--gutter) 4rem; color: var(--muted); font-family: var(--mono); font-size: 11.5px; letter-spacing: 0.06em; }
+</style>
+
+<section class="sheet cover">
+  <div class="wordmark">LegalMine Sentinel</div>
+  <h1>Cada número apunta a una fuente. Cuando el dato falta, lo decimos.</h1>
+  <p class="lede" style="margin-top:1.75rem;">
+    Tamizaje de riesgo legal y territorial para activos mineros en Perú, con evidencia
+    trazable y reproducible meses después.
+  </p>
+  <div class="cover-meta">
+    <div>PRESENTADO A <span>Peru-to-US</span></div>
+    <div>ESTADO <span>Funcional, desplegado</span></div>
+    <div>CÓDIGO <span>Abierto y verificable</span></div>
+  </div>
+</section>
+
+<section class="sheet">
+  <div class="ref"><b>Lámina 01</b><span>El problema</span></div>
+  <h2>Evaluar un activo minero toma semanas, y la información está repartida entre seis instituciones</h2>
+  <div class="stack" style="margin-top:1.75rem;">
+    <p>
+      Un analista que evalúa una concesión en Perú tiene que consultar el catastro de
+      INGEMMET, el registro de áreas protegidas de SERNANP, el REINFO del MINEM, datos
+      hídricos de la ANA, información territorial del Ministerio de Cultura e imágenes
+      satelitales. Cada uno con su portal, su formato y su propia noción de qué está vigente.
+    </p>
+    <p>
+      El resultado: semanas de trabajo manual para responder una pregunta que muchas veces
+      es de descarte. Y cuando la respuesta llega, ya no se puede demostrar contra qué
+      versión del dato se tomó la decisión.
+    </p>
+  </div>
+</section>
+
+<section class="sheet">
+  <div class="ref"><b>Lámina 02</b><span>La falla que nadie admite</span></div>
+  <h2>Un tablero que parece autoritativo y cuyos números no vienen de ninguna parte</h2>
+  <div class="stack" style="margin-top:1.75rem;">
+    <p>
+      Es el modo de falla típico de este tipo de producto, y lo conocemos de primera mano:
+      la primera versión de esta misma aplicación lo tenía. Se veía premium, mostraba
+      porcentajes de riesgo y mapas — y todo estaba escrito a mano en el front.
+    </p>
+    <p>
+      Para un producto que vende evaluación de riesgo legal eso no es un defecto cosmético,
+      es fatal. Basta que un comprador verifique un solo dato para perder la confianza en
+      todo lo demás.
+    </p>
+  </div>
+  <div class="callout callout-copper">
+    <p>
+      <strong>Lo reconstruimos entero bajo una sola regla:</strong> nada llega a pantalla si no
+      puede rastrearse hasta una fuente verificable. Un test automatizado falla el build si
+      alguien vuelve a introducir datos inventados.
+    </p>
+  </div>
+</section>
+
+<section class="sheet">
+  <div class="ref"><b>Lámina 03</b><span>Cómo funciona</span></div>
+  <h2>Del polígono al dossier defendible</h2>
+  <ol class="flow">
+    <li>
+      <span class="step">PASO 1</span>
+      <h3>Cargar el área</h3>
+      <p>GeoJSON, KML o coordenadas. La geometría se valida antes de aceptarse: un área mal cargada daría números correctos sobre el terreno equivocado.</p>
+    </li>
+    <li>
+      <span class="step">PASO 2</span>
+      <h3>Evaluar</h3>
+      <p>Cinco dimensiones de riesgo, reglas explícitas y versionadas. La misma entrada produce siempre la misma salida.</p>
+    </li>
+    <li>
+      <span class="step">PASO 3</span>
+      <h3>Revisar la evidencia</h3>
+      <p>Cada factor enlaza al registro que lo sustenta, con fuente, fecha de consulta y enlace al portal oficial.</p>
+    </li>
+    <li>
+      <span class="step">PASO 4</span>
+      <h3>Emitir el dossier</h3>
+      <p>Documento imprimible que congela la evidencia del día. Reabrirlo no vuelve a consultar las fuentes.</p>
+    </li>
+  </ol>
+</section>
+
+<section class="sheet">
+  <div class="ref"><b>Lámina 04</b><span>La garantía central</span></div>
+  <h2>Riesgo y confianza son cosas distintas, y nunca se mezclan en un solo número</h2>
+  <div class="grid grid-3">
+    <div class="cell">
+      <span class="tag">Trazabilidad</span>
+      <p>Cada factor de riesgo apunta a identificadores de evidencia concretos. Un factor sin evidencia es un bug, no una decisión de diseño.</p>
+    </div>
+    <div class="cell">
+      <span class="tag">Degradación honesta</span>
+      <p>Si una fuente no responde, el campo se marca como no disponible y se propaga así hasta la interfaz. Nunca se rellena con una estimación.</p>
+    </div>
+    <div class="cell">
+      <span class="tag tag-copper">No evaluado ≠ bajo</span>
+      <p>Si nada pudo evaluarse el resultado es <span class="num">NOT_ASSESSED</span>, no <span class="num">LOW</span>. Presentar un cero no medido como riesgo bajo sería lo más peligroso que este producto podría decir.</p>
+    </div>
+  </div>
+</section>
+
+<section class="sheet">
+  <div class="ref"><b>Lámina 05</b><span>Reproducibilidad</span></div>
+  <h2>Un dossier de agosto sigue siendo re-derivable en octubre</h2>
+  <div class="stack" style="margin-top:1.75rem;">
+    <p>
+      Las fuentes oficiales se cosechan una vez al mes en un <strong>snapshot fechado e
+      inmutable</strong>, con checksum de contenido. Cada evaluación declara contra qué
+      snapshot se calculó, y el dossier lo imprime.
+    </p>
+    <p>
+      Sin esto, “determinista” solo significaría “estable dentro de la misma sesión”. Si
+      INGEMMET edita un registro en octubre, un informe emitido en agosto perdería su
+      valor probatorio. Con la base fechada, no.
+    </p>
+  </div>
+  <figure>
+    <svg viewBox="0 0 900 250" role="img" aria-label="Diagrama: fuentes oficiales cosechadas mensualmente en snapshots fechados; cada evaluación se fija a un snapshot y produce un dossier reproducible.">
+      <g font-family="ui-monospace, monospace" font-size="12">
+        <!-- sources -->
+        <rect x="6" y="40" width="150" height="34" fill="none" stroke="currentColor" opacity="0.35"/>
+        <text x="20" y="62" fill="currentColor">INGEMMET</text>
+        <rect x="6" y="86" width="150" height="34" fill="none" stroke="currentColor" opacity="0.35"/>
+        <text x="20" y="108" fill="currentColor">SERNANP</text>
+        <rect x="6" y="132" width="150" height="34" fill="none" stroke="currentColor" opacity="0.35"/>
+        <text x="20" y="154" fill="currentColor">ANA / BDPI</text>
+
+        <path d="M156 103 L232 103" stroke="currentColor" opacity="0.45" fill="none"/>
+        <text x="163" y="94" fill="currentColor" opacity="0.6" font-size="10">cosecha mensual</text>
+
+        <!-- snapshots -->
+        <rect x="232" y="30" width="132" height="146" fill="none" stroke="var(--accent)"/>
+        <text x="246" y="54" fill="var(--accent)" font-weight="600">SNAPSHOT</text>
+        <text x="246" y="78" fill="currentColor">2026-06</text>
+        <text x="246" y="100" fill="currentColor">2026-07</text>
+        <text x="246" y="122" fill="currentColor" font-weight="700">2026-08 ●</text>
+        <text x="246" y="150" fill="currentColor" opacity="0.6" font-size="10">checksum sellado</text>
+
+        <path d="M364 103 L440 103" stroke="currentColor" opacity="0.45" fill="none"/>
+
+        <!-- engine -->
+        <rect x="440" y="66" width="150" height="74" fill="none" stroke="currentColor" opacity="0.35"/>
+        <text x="454" y="96" fill="currentColor">MOTOR DE</text>
+        <text x="454" y="116" fill="currentColor">RIESGO v1</text>
+
+        <path d="M590 103 L666 103" stroke="currentColor" opacity="0.45" fill="none"/>
+
+        <!-- dossier -->
+        <rect x="666" y="52" width="150" height="102" fill="none" stroke="var(--accent)"/>
+        <text x="680" y="82" fill="var(--accent)" font-weight="600">DOSSIER</text>
+        <text x="680" y="106" fill="currentColor" font-size="10">cita período</text>
+        <text x="680" y="124" fill="currentColor" font-size="10">+ checksum</text>
+
+        <!-- delta -->
+        <path d="M298 176 L298 214" stroke="var(--copper)" fill="none"/>
+        <text x="310" y="205" fill="var(--copper)" font-size="11">Δ mes a mes → reporte de cambios</text>
+      </g>
+    </svg>
+    <figcaption>Arquitectura de evidencia — fuentes, base mensual, motor, dossier</figcaption>
+  </figure>
+</section>
+
+<section class="sheet">
+  <div class="ref"><b>Lámina 06</b><span>El modelo de negocio</span></div>
+  <h2>El tamizaje se compra una vez. El monitoreo se paga todos los meses.</h2>
+  <div class="stack" style="margin-top:1.75rem;">
+    <p>
+      Un informe responde <em>qué es cierto hoy</em>: es una compra puntual, y vender solo eso
+      obliga a buscar clientes nuevos cada mes.
+    </p>
+    <p>
+      La base mensual cambia la ecuación. Al comparar el snapshot de este mes contra el del
+      anterior, el producto responde <strong>qué se movió desde la última vez</strong> —
+      concesiones nuevas que se superponen, cambios de estado, límites de áreas protegidas
+      que se modifican. Es la pregunta que el mismo cliente vuelve a hacerse todos los meses
+      sobre las mismas áreas.
+    </p>
+  </div>
+  <div class="callout">
+    <p>
+      Un mes sin cambios también genera reporte. “No cambió nada” es un hallazgo accionable;
+      callarlo dejaría el silencio ambiguo entre <em>no hubo cambios</em> y <em>no miramos</em>.
+    </p>
+  </div>
+</section>
+
+<section class="sheet">
+  <div class="ref"><b>Lámina 07</b><span>Precios</span></div>
+  <h2>Cobrar por área vigilada, no por asiento</h2>
+  <p style="margin-top:1.5rem;">
+    El valor no escala con cuánta gente mira la pantalla: escala con cuántas hectáreas
+    tienes en riesgo. Un fondo con 40 concesiones bajo observación obtiene mucho más valor
+    que uno con una.
+  </p>
+  <div class="scroll-x">
+    <table>
+      <thead>
+        <tr><th>Componente</th><th>Precio</th><th>Lógica</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>Plataforma</td><td class="num">$299 / mes</td><td>Acceso y tamizajes ilimitados</td></tr>
+        <tr><td>Monitoreo por área</td><td class="num">$49 / área / mes</td><td>Escala con el valor real</td></tr>
+        <tr><td>Dossier certificado</td><td class="num">$199 / unidad</td><td>Compra puntual, alto margen</td></tr>
+        <tr><td>Retención extendida</td><td class="num">+20%</td><td>Reproducibilidad más allá de 24 meses</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p style="margin-top:1.5rem; font-size:0.93rem; color:var(--muted);">
+    Precios introductorios, sujetos a revisión con el feedback de los pilotos. La aplicación
+    lo declara así en su propia página de precios en lugar de presentarlos como una lista
+    validada de mercado.
+  </p>
+</section>
+
+<section class="sheet">
+  <div class="ref"><b>Lámina 08</b><span>Estado real</span></div>
+  <h2>Qué está construido y verificado hoy</h2>
+  <div class="grid grid-3">
+    <div class="cell">
+      <span class="tag">Pruebas</span>
+      <div class="metric">47</div>
+      <p>Tests en verde, incluido un barrido que falla el build si reaparecen datos inventados.</p>
+    </div>
+    <div class="cell">
+      <span class="tag">Fuentes</span>
+      <div class="metric">6</div>
+      <p>Adaptadores oficiales tras una interfaz común, con estado y degradación explícitos.</p>
+    </div>
+    <div class="cell">
+      <span class="tag">Despliegue</span>
+      <div class="metric">Live</div>
+      <p>Build de producción compilando y desplegado. Cron mensual programado.</p>
+    </div>
+  </div>
+  <ul class="checks">
+    <li><span class="mark">✓</span><span>Motor de riesgo determinista con reglas versionadas y pesos a la vista</span></li>
+    <li><span class="mark">✓</span><span>Base mensual con snapshots sellados por checksum e inmutables por trigger de base de datos</span></li>
+    <li><span class="mark">✓</span><span>Cosecha resumible: un catastro nacional no cabe en una invocación serverless</span></li>
+    <li><span class="mark">✓</span><span>Monitoreo mensual por área con diferencial mes a mes</span></li>
+    <li><span class="mark">✓</span><span>Dossier imprimible que cita período y checksum de cada snapshot usado</span></li>
+    <li><span class="mark">✓</span><span>Captura de métricas de piloto: tiempo ahorrado, confianza, disposición a pagar</span></li>
+  </ul>
+</section>
+
+<section class="sheet">
+  <div class="ref"><b>Lámina 09</b><span>Expansión</span></div>
+  <h2>La arquitectura no está atada a Perú</h2>
+  <p style="margin-top:1.5rem;">
+    Los adaptadores viven detrás de una interfaz común y las reglas están versionadas por
+    jurisdicción. Añadir un país es configurar capas y calibrar pesos, no reescribir el
+    producto.
+  </p>
+  <div class="scroll-x">
+    <table>
+      <thead>
+        <tr><th>Mercado</th><th>Por qué en ese orden</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>Perú</td><td>Base actual. Fuentes conectadas y reglas calibradas</td></tr>
+        <tr><td>Chile</td><td>Catastro minero digitalizado y accesible, mercado grande</td></tr>
+        <tr><td>Colombia</td><td>ANM con servicios geográficos públicos</td></tr>
+        <tr><td>México</td><td>Volumen alto, datos más fragmentados</td></tr>
+        <tr><td>Brasil</td><td>Mercado enorme, mayor esfuerzo de adaptación</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="callout">
+    <p>
+      El argumento para un comprador internacional no es “cubrimos Perú”, sino:
+      <strong>el mismo motor de trazabilidad, aplicado a la jurisdicción donde tú inviertes.</strong>
+    </p>
+  </div>
+</section>
+
+<section class="sheet">
+  <div class="ref"><b>Lámina 10</b><span>El foso</span></div>
+  <h2>El histórico acumulado no se puede comprar</h2>
+  <div class="grid grid-3">
+    <div class="cell">
+      <span class="tag">Difícil de copiar</span>
+      <h3>Reproducibilidad fechada</h3>
+      <p>Un consultor que entrega un PDF no puede ofrecer un informe re-derivable meses después con checksum del snapshot.</p>
+    </div>
+    <div class="cell">
+      <span class="tag">Difícil de copiar</span>
+      <h3>Trazabilidad total</h3>
+      <p>Cada número apunta a una fuente, una fecha y un enlace verificable. Cuando el dato falta, se dice.</p>
+    </div>
+    <div class="cell">
+      <span class="tag">Imposible de copiar rápido</span>
+      <h3>Dos años de historia</h3>
+      <p>Cada mes que pasa el corpus vale más. Un competidor que arranque hoy tarda dos años en tener dos años de historia.</p>
+    </div>
+  </div>
+</section>
+
+<section class="sheet">
+  <div class="ref"><b>Lámina 11</b><span>Los próximos 90 días</span></div>
+  <h2>Cinco pilotos que produzcan evidencia, no aplausos</h2>
+  <div class="scroll-x">
+    <table>
+      <thead>
+        <tr><th>Ventana</th><th>Objetivo</th><th>Prueba de que funcionó</th></tr>
+      </thead>
+      <tbody>
+        <tr><td class="num">Días 1–30</td><td>5 pilotos sobre activos reales que el cliente ya evalúa</td><td>Tiempo ahorrado medido, no estimado</td></tr>
+        <tr><td class="num">Días 31–60</td><td>Convertir 2 con monitoreo a mitad de precio</td><td>Ingreso real y caso de estudio citable</td></tr>
+        <tr><td class="num">Días 61–90</td><td>Primer reporte de cambios real</td><td>El cliente ve por qué paga todos los meses</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="callout callout-copper">
+    <p>
+      Un piloto que termina en “qué interesante” no es un piloto, es una demo. Cada uno cierra
+      con la misma pregunta: <strong>¿qué tendría que ser cierto para que pagaras por esto el
+      mes que viene?</strong>
+    </p>
+  </div>
+</section>
+
+<section class="sheet">
+  <div class="ref"><b>Lámina 12</b><span>Cierre</span></div>
+  <h2>Lo que hace distinto a este producto es lo que se niega a hacer</h2>
+  <div class="stack" style="margin-top:1.75rem;">
+    <p>
+      No rellena un dato faltante con una estimación. No presenta un cero no medido como
+      riesgo bajo. No afirma legalidad ni reemplaza a un profesional — y lo dice en la primera
+      página de cada informe.
+    </p>
+    <p class="lede">
+      Esa disciplina es exactamente lo que convierte un tablero bonito en evidencia
+      utilizable para decidir.
+    </p>
+  </div>
+</section>
+
+<footer>
+  LegalMine Sentinel · Tamizaje preliminar sobre fuentes oficiales · No constituye asesoría legal
+</footer>
