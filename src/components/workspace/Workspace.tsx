@@ -31,7 +31,7 @@ type Tab = "risk" | "sources" | "map" | "gaps" | "feedback" | "portfolio";
 const TABS: { id: Tab; label: string; icon: typeof ShieldAlert }[] = [
   { id: "risk", label: "Risk Explorer", icon: ShieldAlert },
   { id: "sources", label: "Source Check", icon: Database },
-  { id: "map", label: "Evidence Map", icon: Layers },
+  { id: "map", label: "Mapa de evidencia", icon: Layers },
   { id: "gaps", label: "Not Verified", icon: AlertTriangle },
   { id: "portfolio", label: "Opportunity Radar", icon: Compass },
   { id: "feedback", label: "Pilot Feedback", icon: MessageSquare },
@@ -176,6 +176,7 @@ export default function Workspace({ demoMode }: { demoMode: boolean }) {
                     <MapPanel
                       aoi={project.geometry}
                       evidence={assessment.evidence}
+                      sources={assessment.sourceStatus}
                       center={assessment.geometrySummary.centroid}
                       onSelectEvidence={(item) => setDrawer([item])}
                     />

@@ -2,6 +2,7 @@
 
 import dynamic from "next/dynamic";
 
+import type { SourceStatusSummary } from "@/types/assessment";
 import type { Evidence } from "@/types/evidence";
 import type { GeoGeometry, Position } from "@/types/geo";
 
@@ -21,6 +22,7 @@ const AssessmentMap = dynamic(() => import("./AssessmentMap"), {
 export default function MapPanel(props: {
   aoi: GeoGeometry;
   evidence: Evidence[];
+  sources: SourceStatusSummary[];
   center: Position;
   onSelectEvidence?: (evidence: Evidence) => void;
 }) {
