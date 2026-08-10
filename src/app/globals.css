@@ -181,3 +181,89 @@ h1, h2, h3, h4, h5, h6 {
 .floating-icon {
   animation: floatAnimation 3s infinite ease-in-out;
 }
+
+/* Demo watermark (Plan Maestro §11.2).
+   Any container holding fixture data carries this diagonal band so a reviewer
+   can never mistake demonstration content for a government record. */
+.demo-surface {
+  position: relative;
+  isolation: isolate;
+}
+
+.demo-surface::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  border-radius: inherit;
+  background-image: repeating-linear-gradient(
+    135deg,
+    rgba(217, 70, 239, 0.07) 0px,
+    rgba(217, 70, 239, 0.07) 12px,
+    transparent 12px,
+    transparent 26px
+  );
+}
+
+.demo-surface > * {
+  position: relative;
+  z-index: 1;
+}
+
+/* Print / PDF export of the dossier.
+   The report has to be reproducible on paper with its sources intact, so links
+   and identifiers stay visible and nothing is clipped. */
+@media print {
+  @page {
+    margin: 14mm;
+  }
+
+  html,
+  body {
+    background: #ffffff !important;
+    color: #111827 !important;
+    overflow: visible !important;
+    height: auto !important;
+  }
+
+  .print\:hidden,
+  nav.no-print,
+  .no-print {
+    display: none !important;
+  }
+
+  .print-surface {
+    background: #ffffff !important;
+    color: #111827 !important;
+    border-color: #d1d5db !important;
+    box-shadow: none !important;
+    backdrop-filter: none !important;
+  }
+
+  .print-surface * {
+    color: inherit !important;
+    border-color: #d1d5db !important;
+  }
+
+  .print-muted {
+    color: #4b5563 !important;
+  }
+
+  .print-break {
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+
+  a[href]::after {
+    content: " (" attr(href) ")";
+    font-size: 9px;
+    color: #6b7280;
+    word-break: break-all;
+  }
+
+  a[href^="#"]::after {
+    content: "";
+  }
+}
+
