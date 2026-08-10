@@ -2,6 +2,7 @@ import { getStore } from "@/lib/store";
 import { assessProject } from "@/lib/services/assessment";
 import { badRequest, created, notFound, ok, readJson, serverError } from "@/lib/api/respond";
 import { RULE_VERSION } from "@/lib/rules/v1";
+import type { Project } from "@/types/assessment";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -10,6 +11,13 @@ export const maxDuration = 60;
 
 interface CreateAssessmentBody {
   projectId?: string;
+  /**
+   * Serverless fallback. Vercel can route the project creation request and the
+   * assessment request to different instances while the deployment is still
+   * using the honest in-memory store. Passing the already validated project
+   * snapshot lets the assessment continue without pretending memory is durable.
+   */
+  projectSnapshot?: Project;
   ruleVersion?: string;
   includeSatellite?: boolean;
   reinfoQuery?: string;
@@ -47,11 +55,19 @@ export async function POST(request: Request) {
 
   try {
     const store = await getStore();
-    const project = await store.getProject(body.projectId);
+    let project = await store.getProject(body.projectId);
     if (!project) {
-      return notFound(
-        "Project not found. If this deployment uses the ephemeral in-memory store, create the project again.",
-      );
+      const snapshot = body.projectSnapshot;
+      if (snapshot?.id === body.projectId) {
+        project = snapshot;
+        await store.saveProject(project);
+      } else {
+        return notFound(
+          store.ephemeral
+            ? "Project not found in this serverless instance. Re-upload the area or configure durable storage."
+            : "Project not found.",
+        );
+      }
     }
 
     const assessment = await assessProject(project, {

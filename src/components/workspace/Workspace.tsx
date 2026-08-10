@@ -53,7 +53,7 @@ export default function Workspace({ demoMode }: { demoMode: boolean }) {
       const response = await fetch("/api/assessments", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ projectId: target.id }),
+        body: JSON.stringify({ projectId: target.id, projectSnapshot: target }),
       });
       const payload = (await response.json()) as {
         assessment?: Assessment;
