@@ -39,7 +39,7 @@ Concretely, that means:
 | Engine | Same deterministic rule set | Same deterministic rule set |
 | Labelling | Records carry `Official` / `Reference` / `User-provided` badges | Every record carries a `DEMO` badge, a diagonal watermark and a banner |
 | Dossier | Standard report | Same report with a "DEMONSTRATION DOSSIER" header |
-| REINFO | Manual verification required | **Still** manual verification required — registration status is never simulated |
+| REINFO | Official GEOCATMIN spatial layer for AOI screening; certified portal printout still required | **Still** no fabricated registration status; demo mode never simulates REINFO |
 | Satellite | Real Sentinel-2 catalogue when enabled | Not configured — no fake imagery is generated |
 
 Demo mode only *adds* a clearly labelled fixture path. It never changes how a real source
@@ -93,7 +93,7 @@ displays "connected" or "synced" without a live probe behind it.
 |---|---|---|---|
 | INGEMMET — mining cadastre (GEOCATMIN) | `INGEMMET_LAYER_URL` | P0 | ArcGIS REST layer. Cadastral data is referential; confirm against the official file. |
 | SERNANP — protected areas (Geo ANP) | `SERNANP_LAYER_URL` | P0 | ArcGIS REST layer. An intersection is a screening signal, not an automatic prohibition. |
-| MINEM — REINFO | `REINFO_API_URL` | P1 | Leave unset unless a stable official interface is confirmed. The default adapter requires manual verification and never scrapes silently. |
+| MINEM — REINFO | `REINFO_LAYER_URL`, `REINFO_API_URL` | P1 | Defaults to the official GEOCATMIN `SERV_REINFO` layer for spatial AOI screening. A certified dossier should still attach the MINEM portal printout by COD_REINFO or RUC. |
 | Copernicus — Sentinel-2 L2A | `COPERNICUS_ENABLED`, `COPERNICUS_STAC_URL` | P2 | Scene metadata only; no index is computed. |
 | MINCUL BDPI — territorial context | `BDPI_LAYER_URL` | P2 | Context, not a legal conclusion. |
 | ANA — water resources | `ANA_LAYER_URL` | P2 | Confirm the exact layer before automating. |
@@ -207,8 +207,9 @@ recorded yet" rather than a placeholder number.
 - **Union coverage is approximated.** Overlapping mining rights are summed and capped at
   100% of the AOI rather than clipped pairwise. Cadastral parcels are largely
   non-overlapping, so the error is bounded, but the figure is a screening estimate.
-- **REINFO has no automated lookup** in the default configuration, and absence of a record
-  is never treated as evidence of illegality.
+- **REINFO uses an automated spatial screening layer**, but certified registration reliance
+  still requires a MINEM portal printout by COD_REINFO or RUC. Absence of a spatial hit is
+  never treated as evidence of illegality.
 - **Territorial and water dimensions ship unconfigured**, which is why a default
   installation reports four open due-diligence gaps.
 

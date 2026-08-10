@@ -136,7 +136,7 @@ async function driveUpload<T>(
   method: "POST" | "PATCH",
 ): Promise<T> {
   const token = await accessToken(ctx);
-  const boundary = `legalmine_${Date.now()}_${Math.random().toString(16).slice(2)}`;
+  const boundary = `legalmine_${Date.now()}_${crypto.randomUUID()}`;
   const body = [
     `--${boundary}`,
     "Content-Type: application/json; charset=UTF-8",

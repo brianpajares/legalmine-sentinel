@@ -167,7 +167,7 @@ export default function Workspace({ demoMode }: { demoMode: boolean }) {
                 ) : null}
                 {tab === "sources" ? <SourceCheck sources={assessment.sourceStatus} /> : null}
                 {tab === "gaps" ? <MissingData assessment={assessment} /> : null}
-                {tab === "portfolio" ? <PortfolioRadar /> : null}
+                {tab === "portfolio" ? <PortfolioRadar currentAssessment={assessment} /> : null}
                 {tab === "feedback" ? (
                   <FeedbackForm assessmentId={assessment.id} projectId={assessment.projectId} />
                 ) : null}
