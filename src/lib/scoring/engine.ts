@@ -239,6 +239,8 @@ export function runAssessment(input: RunAssessmentInput): Assessment {
     evidence: input.bundle.evidence,
     geometrySummary: input.geometrySummary,
     demoMode: input.demoMode ?? false,
+    basisMode: input.bundle.basisMode,
+    corpusBasis: input.bundle.corpusBasis,
     durationMs: Date.now() - startedAt,
   };
 }

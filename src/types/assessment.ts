@@ -1,6 +1,7 @@
 import type { Evidence } from "./evidence";
 import type { SourceStatus } from "./sources";
 import type { GeoGeometry, GeometrySummary } from "./geo";
+import type { CorpusBasis, EvidenceBasisMode } from "./corpus";
 
 export type RiskDimensionKey =
   | "legal_tenure"
@@ -123,6 +124,18 @@ export interface Assessment {
   geometrySummary: GeometrySummary;
   /** True when any input to this assessment came from demo fixtures. */
   demoMode: boolean;
+  /**
+   * Whether the cadastral and protected-area answers came from a dated monthly
+   * snapshot or from a live query. Printed on the dossier: "as of the August
+   * snapshot" and "as of this minute" are different claims.
+   */
+  basisMode: EvidenceBasisMode;
+  /**
+   * The exact snapshots behind this assessment. With these recorded, the result
+   * can be re-derived identically for as long as the snapshots are retained;
+   * without them, determinism would only hold within a single session.
+   */
+  corpusBasis: CorpusBasis[];
   durationMs: number;
 }
 

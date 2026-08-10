@@ -133,6 +133,10 @@ function buildDemoBundle(project: Project): EvidenceBundle {
     satellite,
     evidence,
     collectedAt: new Date().toISOString(),
+    // Fixtures stand in for a live query, not for a dated snapshot; calling
+    // this "corpus" would attach a reproducibility claim to invented data.
+    basisMode: "live",
+    corpusBasis: [],
   };
 }
 

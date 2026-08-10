@@ -77,7 +77,48 @@ export default function Dossier({
           <Meta label="Assessment status" value={assessment.status} />
           <Meta label="Geometry hash" value={assessment.geometrySummary.geometryHash} mono />
           <Meta label="Country" value={project?.country ?? "—"} />
+          <Meta
+            label="Evidence basis"
+            value={
+              assessment.basisMode === "corpus"
+                ? `Monthly snapshot — ${assessment.corpusBasis.map((b) => b.period).join(", ")}`
+                : "Live query at assessment time"
+            }
+          />
         </dl>
+
+        {assessment.corpusBasis.length > 0 ? (
+          <div className="mt-5 rounded-lg border border-white/15 bg-white/[0.03] px-4 py-3 print-surface">
+            <p className="text-[11px] font-semibold uppercase tracking-wide text-gray-300">
+              Reproducibility basis
+            </p>
+            <p className="mt-1 text-[11px] leading-relaxed text-gray-400">
+              This assessment was computed against dated snapshots of the official layers. Re-running
+              it against the same snapshots reproduces this result exactly, for as long as they are
+              retained — the finding does not drift when the source is later edited.
+            </p>
+            <table className="mt-3 w-full text-left text-[10px]">
+              <thead className="text-gray-500">
+                <tr>
+                  <th className="pb-1 font-semibold">Source</th>
+                  <th className="pb-1 font-semibold">Period</th>
+                  <th className="pb-1 font-semibold">Records</th>
+                  <th className="pb-1 font-semibold">Snapshot checksum</th>
+                </tr>
+              </thead>
+              <tbody className="text-gray-300">
+                {assessment.corpusBasis.map((basis) => (
+                  <tr key={basis.snapshotId} className="border-t border-white/10">
+                    <td className="py-1 pr-3">{basis.sourceKey}</td>
+                    <td className="py-1 pr-3">{basis.period}</td>
+                    <td className="py-1 pr-3">{basis.recordCount.toLocaleString()}</td>
+                    <td className="py-1 font-mono">{basis.checksum ?? "—"}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        ) : null}
 
         <p className="mt-5 rounded-lg border border-amber-500/40 bg-amber-500/10 px-4 py-3 text-[11px] leading-relaxed text-amber-200 print-surface">
           <strong className="font-bold">Preliminary screening — not legal advice.</strong> This report

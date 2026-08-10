@@ -4,7 +4,9 @@ import type { Evidence } from "@/types/evidence";
 import type { GeoGeometry } from "@/types/geo";
 import type { SourceResult, SourceStatus } from "@/types/sources";
 import type { SourceStatusSummary } from "@/types/assessment";
+import type { CorpusBasis, EvidenceBasisMode } from "@/types/corpus";
 import { overlap } from "@/lib/geo/measure";
+import { queryCorpusMiningRights, queryCorpusProtectedAreas } from "@/lib/corpus/query";
 
 import { fetchMiningRights, type MiningRightRecord } from "./ingemmet";
 import { fetchProtectedAreas, type ProtectedAreaRecord } from "./sernanp";
@@ -28,6 +30,10 @@ export interface EvidenceBundle {
   satellite: SourceResult<SatelliteSceneRecord>;
   evidence: Evidence[];
   collectedAt: string;
+  /** How the cadastral and protected-area answers were sourced. */
+  basisMode: EvidenceBasisMode;
+  /** The exact snapshots this bundle was read from, when in corpus mode. */
+  corpusBasis: CorpusBasis[];
 }
 
 /** Deterministic evidence identifier derived from its content, not a counter. */
@@ -151,6 +157,58 @@ export interface CollectOptions {
   reinfoQuery?: string;
   /** Skip the satellite catalogue for faster assessments. */
   includeSatellite?: boolean;
+  /**
+   * Where the cadastral and protected-area answers come from.
+   *
+   * `corpus` reads the dated monthly snapshot: fast, reproducible, and as old
+   * as its period. `live` queries the official layer directly: current to the
+   * minute, slower, and it degrades when the service is down. The default falls
+   * back to `live` whenever no snapshot has been built, so a fresh deployment
+   * still works before the first harvest has run.
+   */
+  basis?: EvidenceBasisMode;
+}
+
+/**
+ * Reads the cadastre and protected areas from the corpus, falling back to a
+ * live query when no snapshot is available.
+ *
+ * The fallback is never silent: the returned bundle records which mode was used
+ * and the dossier prints it, because "as of the August snapshot" and "as of
+ * this minute" are different claims and a buyer is entitled to know which one
+ * they are holding.
+ */
+async function resolveBasis(
+  aoi: GeoGeometry,
+  preferred: EvidenceBasisMode,
+): Promise<{
+  miningRights: SourceResult<MiningRightRecord>;
+  protectedAreas: SourceResult<ProtectedAreaRecord>;
+  mode: EvidenceBasisMode;
+  corpusBasis: CorpusBasis[];
+}> {
+  if (preferred === "corpus") {
+    const [rights, areas] = await Promise.all([
+      queryCorpusMiningRights(aoi),
+      queryCorpusProtectedAreas(aoi),
+    ]);
+    // A corpus that answers for both P0 sources is a corpus-mode assessment.
+    // Anything less falls back rather than mixing two bases in one score.
+    if (rights.basis && areas.basis) {
+      return {
+        miningRights: rights.result,
+        protectedAreas: areas.result,
+        mode: "corpus",
+        corpusBasis: [rights.basis, areas.basis],
+      };
+    }
+  }
+
+  const [miningRights, protectedAreas] = await Promise.all([
+    fetchMiningRights(aoi),
+    fetchProtectedAreas(aoi),
+  ]);
+  return { miningRights, protectedAreas, mode: "live", corpusBasis: [] };
 }
 
 /** Queries every source in parallel and normalizes the answers into evidence. */
@@ -160,10 +218,11 @@ export async function collectEvidence(
   options: CollectOptions = {},
 ): Promise<EvidenceBundle> {
   const includeSatellite = options.includeSatellite ?? true;
+  const preferred: EvidenceBasisMode =
+    options.basis ?? (process.env.CORPUS_MODE === "live" ? "live" : "corpus");
 
-  const [miningRights, protectedAreas, reinfo, satellite] = await Promise.all([
-    fetchMiningRights(aoi),
-    fetchProtectedAreas(aoi),
+  const [basis, reinfo, satellite] = await Promise.all([
+    resolveBasis(aoi, preferred),
     fetchReinfoStatus(options.reinfoQuery),
     includeSatellite
       ? searchSentinelScenes(aoi)
@@ -178,6 +237,8 @@ export async function collectEvidence(
           warnings: ["Satellite search was skipped for this assessment."],
         }),
   ]);
+
+  const { miningRights, protectedAreas } = basis;
 
   const evidence: Evidence[] = [
     statusEvidence(miningRights, "mining rights"),
@@ -214,6 +275,8 @@ export async function collectEvidence(
     satellite,
     evidence,
     collectedAt: new Date().toISOString(),
+    basisMode: basis.mode,
+    corpusBasis: basis.corpusBasis,
   };
 }
 

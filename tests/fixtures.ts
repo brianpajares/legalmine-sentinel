@@ -6,6 +6,7 @@ import type { ProtectedAreaRecord } from "@/lib/sources/sernanp";
 import type { ReinfoRecord } from "@/lib/sources/reinfo";
 import type { SatelliteSceneRecord } from "@/lib/sources/copernicus";
 import type { EvidenceBundle } from "@/lib/sources/collect";
+import type { CorpusBasis, EvidenceBasisMode } from "@/types/corpus";
 import { overlap, summarize } from "@/lib/geo/measure";
 
 /** A one-square-ish AOI in Madre de Dios, used as the standard test area. */
@@ -143,6 +144,8 @@ export interface BundleOverrides {
   protectedAreas?: SourceResult<ProtectedAreaRecord>;
   reinfo?: SourceResult<ReinfoRecord>;
   satellite?: SourceResult<SatelliteSceneRecord>;
+  basisMode?: EvidenceBasisMode;
+  corpusBasis?: CorpusBasis[];
 }
 
 export function makeBundle(overrides: BundleOverrides = {}): EvidenceBundle {
@@ -172,5 +175,7 @@ export function makeBundle(overrides: BundleOverrides = {}): EvidenceBundle {
         evidence(`ev_sernanp_anp_${i}`, "sernanp", protectedAreas.status, "finding"),
       ),
     ],
+    basisMode: overrides.basisMode ?? "live",
+    corpusBasis: overrides.corpusBasis ?? [],
   };
 }

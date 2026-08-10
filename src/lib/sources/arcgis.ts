@@ -104,14 +104,14 @@ export interface ArcGisQueryOptions {
   timeoutMs?: number;
 }
 
-/** Runs an intersects query and throws ArcGisError when the layer cannot answer. */
-export async function queryArcGisLayer(options: ArcGisQueryOptions): Promise<ArcGisQueryResult> {
-  const { layerUrl, geometry, outFields = "*", maxRecords = 200 } = options;
-  const timeoutMs = options.timeoutMs ?? SOURCE_TIMEOUT_MS;
-  const endpoint = `${layerUrl.replace(/\/+$/, "")}/query`;
-  const params = buildQueryParams(geometry, outFields, maxRecords);
-  const requestUrl = `${endpoint}?${new URLSearchParams({ ...params, geometry: "<AOI polygon>" }).toString()}`;
-
+/** Posts a query and returns the parsed body, raising ArcGisError on any
+ *  transport-, protocol- or service-level failure. */
+async function postArcGis(
+  endpoint: string,
+  params: Record<string, string>,
+  timeoutMs: number,
+  requestUrl: string,
+): Promise<{ body: Record<string, unknown>; text: string; durationMs: number }> {
   const started = Date.now();
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), timeoutMs);
@@ -163,33 +163,117 @@ export async function queryArcGisLayer(options: ArcGisQueryOptions): Promise<Arc
     );
   }
 
-  const features: ArcGisFeature[] = [];
+  return { body, text, durationMs: Date.now() - started };
+}
 
-  if (Array.isArray(body.features)) {
-    for (const raw of body.features as Record<string, unknown>[]) {
-      // GeoJSON encoding
-      if (raw.type === "Feature" || raw.properties) {
-        features.push({
-          attributes: (raw.properties as Record<string, unknown>) ?? {},
-          geometry: normalizeGeoJsonGeometry(raw.geometry),
-        });
-        continue;
-      }
-      // Esri JSON encoding
-      const esriGeometry = raw.geometry as { rings?: Position[][] } | undefined;
+/** Normalizes both response encodings into a single feature shape. */
+export function parseArcGisFeatures(body: Record<string, unknown>): ArcGisFeature[] {
+  const features: ArcGisFeature[] = [];
+  if (!Array.isArray(body.features)) return features;
+
+  for (const raw of body.features as Record<string, unknown>[]) {
+    // GeoJSON encoding
+    if (raw.type === "Feature" || raw.properties) {
       features.push({
-        attributes: (raw.attributes as Record<string, unknown>) ?? {},
-        geometry: esriGeometry?.rings ? esriRingsToGeoJson(esriGeometry.rings) : null,
+        attributes: (raw.properties as Record<string, unknown>) ?? {},
+        geometry: normalizeGeoJsonGeometry(raw.geometry),
       });
+      continue;
     }
+    // Esri JSON encoding
+    const esriGeometry = raw.geometry as { rings?: Position[][] } | undefined;
+    features.push({
+      attributes: (raw.attributes as Record<string, unknown>) ?? {},
+      geometry: esriGeometry?.rings ? esriRingsToGeoJson(esriGeometry.rings) : null,
+    });
   }
+  return features;
+}
+
+/** Runs an intersects query and throws ArcGisError when the layer cannot answer. */
+export async function queryArcGisLayer(options: ArcGisQueryOptions): Promise<ArcGisQueryResult> {
+  const { layerUrl, geometry, outFields = "*", maxRecords = 200 } = options;
+  const timeoutMs = options.timeoutMs ?? SOURCE_TIMEOUT_MS;
+  const endpoint = `${layerUrl.replace(/\/+$/, "")}/query`;
+  const params = buildQueryParams(geometry, outFields, maxRecords);
+  const requestUrl = `${endpoint}?${new URLSearchParams({ ...params, geometry: "<AOI polygon>" }).toString()}`;
+
+  const { body, text, durationMs } = await postArcGis(endpoint, params, timeoutMs, requestUrl);
 
   return {
-    features,
+    features: parseArcGisFeatures(body),
     requestUrl,
     checksum: createHash("sha256").update(text).digest("hex").slice(0, 32),
-    durationMs: Date.now() - started,
+    durationMs,
   };
+}
+
+export interface ArcGisPageOptions {
+  layerUrl: string;
+  /** Records to skip. ArcGIS paging is offset-based. */
+  offset: number;
+  pageSize: number;
+  outFields?: string;
+  /**
+   * Sort key for the harvest. Offset paging is only stable under a deterministic
+   * order, so a harvest without one can silently duplicate and drop records
+   * between pages. Defaults to the Esri object id, which every layer exposes.
+   */
+  orderByFields?: string;
+  timeoutMs?: number;
+}
+
+export interface ArcGisPageResult extends ArcGisQueryResult {
+  /** True when the service has more rows beyond this page. */
+  exceededTransferLimit: boolean;
+}
+
+/**
+ * Reads one page of an entire layer, without a geometry filter.
+ *
+ * This is the harvest path that builds a monthly snapshot, as opposed to the
+ * per-AOI intersects query above.
+ */
+export async function queryArcGisPage(options: ArcGisPageOptions): Promise<ArcGisPageResult> {
+  const { layerUrl, offset, pageSize, outFields = "*", orderByFields = "OBJECTID" } = options;
+  const timeoutMs = options.timeoutMs ?? SOURCE_TIMEOUT_MS;
+  const endpoint = `${layerUrl.replace(/\/+$/, "")}/query`;
+  const params = {
+    where: "1=1",
+    outFields,
+    returnGeometry: "true",
+    outSR: "4326",
+    orderByFields,
+    resultOffset: String(offset),
+    resultRecordCount: String(pageSize),
+    f: "geojson",
+  } satisfies Record<string, string>;
+  const requestUrl = `${endpoint}?${new URLSearchParams(params).toString()}`;
+
+  const { body, text, durationMs } = await postArcGis(endpoint, params, timeoutMs, requestUrl);
+
+  return {
+    features: parseArcGisFeatures(body),
+    requestUrl,
+    checksum: createHash("sha256").update(text).digest("hex").slice(0, 32),
+    durationMs,
+    exceededTransferLimit: body.exceededTransferLimit === true,
+  };
+}
+
+/** Total row count for a layer, used to size a harvest before it starts. */
+export async function countArcGisRecords(
+  layerUrl: string,
+  timeoutMs = SOURCE_TIMEOUT_MS,
+): Promise<number | null> {
+  const endpoint = `${layerUrl.replace(/\/+$/, "")}/query`;
+  const params = { where: "1=1", returnCountOnly: "true", f: "json" };
+  try {
+    const { body } = await postArcGis(endpoint, params, timeoutMs, endpoint);
+    return typeof body.count === "number" ? body.count : null;
+  } catch {
+    return null;
+  }
 }
 
 /** Lightweight reachability probe used by /api/health/sources. */
