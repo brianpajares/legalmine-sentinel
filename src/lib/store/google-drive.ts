@@ -567,5 +567,54 @@ export function createGoogleDriveStore(options: GoogleDriveStoreOptions): Store 
 
       return { fileId: uploaded.id, fileName: uploaded.name, webViewLink };
     },
+
+    async saveDataWorkbook({ assessmentId, fileName, xml }): Promise<SavedDossier | null> {
+      const folderId = await ensureDossiersFolderId(ctx);
+
+      const existing = await findFile(
+        ctx,
+        [
+          `name=${driveQueryLiteral(fileName)}`,
+          `${driveQueryLiteral(folderId)} in parents`,
+          "trashed=false",
+        ].join(" and "),
+      );
+
+      const metadataProps = {
+        assessmentId,
+        source: "legalmine-sentinel",
+        kind: "workbook",
+        renderedAt: new Date().toISOString(),
+      };
+
+      // Declared as Excel rather than plain XML so Drive previews it as a
+      // spreadsheet and "Open with Google Sheets" appears in the menu.
+      const mimeType = "application/vnd.ms-excel";
+
+      const uploaded = existing
+        ? await driveUpload<DriveFile & { webViewLink?: string }>(
+            ctx,
+            `files/${encodeURIComponent(existing.id)}?uploadType=multipart&fields=id,name,webViewLink`,
+            { name: fileName, mimeType, appProperties: metadataProps },
+            xml,
+            "PATCH",
+            `${mimeType}; charset=UTF-8`,
+          )
+        : await driveUpload<DriveFile & { webViewLink?: string }>(
+            ctx,
+            "files?uploadType=multipart&fields=id,name,webViewLink",
+            { name: fileName, parents: [folderId], mimeType, appProperties: metadataProps },
+            xml,
+            "POST",
+            `${mimeType}; charset=UTF-8`,
+          );
+
+      return {
+        fileId: uploaded.id,
+        fileName: uploaded.name,
+        webViewLink:
+          uploaded.webViewLink ?? `https://drive.google.com/file/d/${uploaded.id}/view`,
+      };
+    },
   };
 }

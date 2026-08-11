@@ -16,14 +16,14 @@ export default function MissingData({ assessment }: { assessment: Assessment }) 
   return (
     <Panel className="p-5">
       <PanelHeader
-        title="What we could not verify"
-        subtitle={`${assessment.missingChecks.length} open due-diligence gap(s) in this assessment.`}
+        title="Lo que no se pudo verificar"
+        subtitle={`${assessment.missingChecks.length} vacío(s) de debida diligencia abiertos en este análisis.`}
       />
 
       {assessment.missingChecks.length === 0 ? (
         <p className="mt-4 rounded-lg border border-emerald-500/25 bg-emerald-500/10 px-4 py-4 text-xs leading-relaxed text-emerald-200">
-          Every rule in this version was evaluated with live data. That does not make the screening
-          exhaustive — it means no configured check was skipped.
+          Todas las reglas de esta versión se evaluaron con datos en vivo. Eso no vuelve exhaustivo al
+          tamizaje — significa que ninguna verificación configurada se omitió.
         </p>
       ) : (
         <ul className="mt-4 space-y-3">

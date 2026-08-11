@@ -4,7 +4,14 @@ import { useEffect, useMemo, useState } from "react";
 import { GeoJSON, MapContainer, TileLayer, useMap } from "react-leaflet";
 import L from "leaflet";
 import type { Feature, Geometry } from "geojson";
-import { AlertTriangle, CheckCircle2, ExternalLink, Layers, MapPinned } from "lucide-react";
+import {
+  AlertTriangle,
+  CheckCircle2,
+  ExternalLink,
+  Layers,
+  MapPinned,
+  PanelRightClose,
+} from "lucide-react";
 
 import type { SourceStatusSummary } from "@/types/assessment";
 import type { Evidence } from "@/types/evidence";
@@ -39,13 +46,17 @@ const SOURCE_STYLE: Record<string, { color: string; label: string }> = {
 
 const FALLBACK_STYLE = { color: "#94a3b8", label: "Otra evidencia" };
 
-function FitBounds({ aoi }: { aoi: GeoGeometry }) {
+/** Keeps the area of interest framed in the space the panel leaves free. */
+function FitBounds({ aoi, panelOpen }: { aoi: GeoGeometry; panelOpen: boolean }) {
   const map = useMap();
   useEffect(() => {
     const layer = L.geoJSON(aoi as unknown as Geometry);
     const bounds = layer.getBounds();
-    if (bounds.isValid()) map.fitBounds(bounds, { padding: [90, 420], maxZoom: 14 });
-  }, [aoi, map]);
+    if (!bounds.isValid()) return;
+    // Reserve horizontal room only while the side panel actually covers the map;
+    // otherwise the area is pushed off-centre for no reason.
+    map.fitBounds(bounds, { padding: [90, panelOpen ? 420 : 90], maxZoom: 14 });
+  }, [aoi, map, panelOpen]);
   return null;
 }
 
@@ -62,6 +73,7 @@ export default function AssessmentMap({
   );
   const findings = useMemo(() => evidence.filter((item) => item.kind === "finding"), [evidence]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [panelOpen, setPanelOpen] = useState(true);
   const answeredSources = sources.filter((source) => source.status === "OK" || source.status === "STALE");
   const mappedSourceKeys = new Set(geometryEvidence.map((item) => item.sourceKey));
   const selectedEvidence = geometryEvidence.find((item) => item.id === selectedId) ?? geometryEvidence[0] ?? null;
@@ -82,7 +94,7 @@ export default function AssessmentMap({
           attribution="Imagery &copy; Esri - Source: Esri, Maxar, Earthstar Geographics, and the GIS User Community"
           url="https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"
         />
-        <FitBounds aoi={aoi} />
+        <FitBounds aoi={aoi} panelOpen={panelOpen} />
 
         {geometryEvidence.map((item) => {
           const sourceStyle = SOURCE_STYLE[item.sourceKey] ?? FALLBACK_STYLE;
@@ -139,14 +151,41 @@ export default function AssessmentMap({
         </div>
       </div>
 
-      <aside className="absolute bottom-4 right-4 top-4 z-[500] flex w-[430px] max-w-[calc(100%-2rem)] flex-col overflow-hidden rounded-lg border border-white/15 bg-[#070a13]/92 shadow-2xl backdrop-blur">
+      {/* Collapsible: at 430px this panel covers most of a narrow map container,
+          and the map is what the operator opened this tab to look at. */}
+      {!panelOpen ? (
+        <button
+          type="button"
+          onClick={() => setPanelOpen(true)}
+          className="absolute right-4 top-4 z-[500] inline-flex items-center gap-1.5 rounded-lg border border-white/15 bg-[#070a13]/92 px-3 py-2 text-[11px] font-semibold text-gray-200 shadow-2xl backdrop-blur transition hover:bg-[#070a13]"
+        >
+          <Layers className="h-3.5 w-3.5 text-blue-300" />
+          Qué se revisó
+        </button>
+      ) : null}
+
+      <aside
+        className={`absolute bottom-4 right-4 top-4 z-[500] flex w-[430px] max-w-[calc(100%-2rem)] flex-col overflow-hidden rounded-lg border border-white/15 bg-[#070a13]/92 shadow-2xl backdrop-blur transition ${
+          panelOpen ? "" : "pointer-events-none opacity-0"
+        }`}
+        aria-hidden={!panelOpen}
+      >
         <div className="border-b border-white/10 px-4 py-3">
           <div className="flex items-center gap-2">
             <Layers className="h-4 w-4 text-blue-300" />
-            <h3 className="text-sm font-bold text-white">Que se reviso</h3>
+            <h3 className="text-sm font-bold text-white">Qué se revisó</h3>
+            <button
+              type="button"
+              onClick={() => setPanelOpen(false)}
+              className="ml-auto rounded-md p-1 text-gray-500 transition hover:bg-white/10 hover:text-gray-200"
+              aria-label="Ocultar el panel y ver el mapa completo"
+              title="Ocultar y ver el mapa completo"
+            >
+              <PanelRightClose className="h-4 w-4" />
+            </button>
           </div>
           <p className="mt-1 text-[11px] leading-relaxed text-gray-400">
-            Cada fila representa una fuente consultada. Si tiene geometria, se dibuja en el mapa y
+            Cada fila representa una fuente consultada. Si tiene geometría, se dibuja en el mapa y
             puede abrirse como evidencia.
           </p>
         </div>
