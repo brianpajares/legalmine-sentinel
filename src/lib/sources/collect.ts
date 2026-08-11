@@ -149,6 +149,8 @@ function satelliteEvidence(
       cloudCoverPercent: scene.cloudCoverPercent,
       platform: scene.platform,
       processingLevel: scene.processingLevel,
+      vegetationChangePercent: scene.vegetationChangePercent ?? null,
+      vegetationInterpretation: scene.vegetationInterpretation ?? null,
       previewUrl: scene.previewUrl,
       role,
     },

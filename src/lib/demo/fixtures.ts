@@ -4,6 +4,7 @@ import type { MiningRightRecord } from "@/lib/sources/ingemmet";
 import type { ProtectedAreaRecord } from "@/lib/sources/sernanp";
 import type { ReinfoRecord } from "@/lib/sources/reinfo";
 import type { SatelliteSceneRecord } from "@/lib/sources/copernicus";
+import type { ContextRecord } from "@/lib/sources/context";
 import { overlap } from "@/lib/geo/measure";
 
 /**
@@ -58,6 +59,32 @@ const DEMO_ANP_GEOMETRY: GeoGeometry = {
       [-69.8, -12.95],
       [-69.84, -12.95],
       [-69.84, -12.915],
+    ],
+  ],
+};
+
+const DEMO_BDPI_GEOMETRY: GeoGeometry = {
+  type: "Polygon",
+  coordinates: [
+    [
+      [-69.858, -12.902],
+      [-69.833, -12.902],
+      [-69.833, -12.918],
+      [-69.858, -12.918],
+      [-69.858, -12.902],
+    ],
+  ],
+};
+
+const DEMO_WATER_GEOMETRY: GeoGeometry = {
+  type: "Polygon",
+  coordinates: [
+    [
+      [-69.86, -12.918],
+      [-69.82, -12.918],
+      [-69.82, -12.928],
+      [-69.86, -12.928],
+      [-69.86, -12.918],
     ],
   ],
 };
@@ -128,18 +155,32 @@ export function demoProtectedAreas(aoi: GeoGeometry): SourceResult<ProtectedArea
   };
 }
 
-/**
- * Even in demo mode REINFO stays unverified. Fabricating a registration status
- * is the single most damaging thing this product could do, so the fixture
- * deliberately reproduces the real "manual check required" behaviour.
- */
+/** Investor demo REINFO record. It is fictional and always rendered with the DEMO tier. */
 export function demoReinfo(): SourceResult<ReinfoRecord> {
   return {
     ...demoBase("reinfo", "Formalization registry"),
-    status: "MANUAL_VERIFICATION_REQUIRED",
-    records: [],
+    status: "OK",
+    records: [
+      {
+        query: "INVESTOR_DEMO_SCENARIO",
+        found: true,
+        status: "VIGENTE - DEMO",
+        declarant: "DEMO MINERO EN FORMALIZACION S.A.C.",
+        representative: "DEMO REPRESENTANTE",
+        ruc: "DEMO-RUC",
+        rightCode: "DEMO-0000001",
+        rightName: "DEMO CONCESSION ALPHA",
+        codReinfo: "DEMO-REINFO-001",
+        activityType: "Explotacion",
+        coordinateStatus: "Coordenada declarada intersecta AOI",
+        updatedAt: new Date().toISOString(),
+        latitude: -12.914,
+        longitude: -69.842,
+        raw: { demo: true },
+      },
+    ],
     warnings: [
-      "Registration status is never simulated, not even in demo mode. This check stays pending in every assessment until a real lookup is performed.",
+      "DEMO REINFO record generated for investor demonstration. Not a MINEM response; certified reliance still requires portal printout.",
     ],
   };
 }
@@ -147,10 +188,72 @@ export function demoReinfo(): SourceResult<ReinfoRecord> {
 export function demoSatellite(): SourceResult<SatelliteSceneRecord> {
   return {
     ...demoBase("copernicus", "Sentinel-2 catalogue"),
-    status: "NOT_CONFIGURED",
-    records: [],
+    status: "OK",
+    records: [
+      {
+        productId: "DEMO-S2-L2A-BEFORE",
+        acquiredAt: "2026-05-15T15:02:00.000Z",
+        cloudCoverPercent: 8.2,
+        platform: "Sentinel-2A",
+        processingLevel: "L2A",
+        vegetationChangePercent: null,
+        vegetationInterpretation: "Escena base DEMO para comparacion visual.",
+        previewUrl: null,
+        itemUrl: null,
+      },
+      {
+        productId: "DEMO-S2-L2A-AFTER",
+        acquiredAt: "2026-08-02T15:07:00.000Z",
+        cloudCoverPercent: 6.4,
+        platform: "Sentinel-2B",
+        processingLevel: "L2A",
+        vegetationChangePercent: -14.8,
+        vegetationInterpretation:
+          "DEMO: perdida moderada de vigor vegetal en el sector central; requiere verificacion GIS/NDVI real.",
+        previewUrl: null,
+        itemUrl: null,
+      },
+    ],
     warnings: [
-      "No satellite imagery is simulated. Configure COPERNICUS_ENABLED=true to search the real Sentinel-2 catalogue.",
+      "DEMO satellite metadata and vegetation indicator. Not a Copernicus response and not a real NDVI computation.",
+    ],
+  };
+}
+
+export function demoTerritorial(aoi: GeoGeometry): SourceResult<ContextRecord> {
+  const measured = overlap(aoi, DEMO_BDPI_GEOMETRY);
+  return {
+    ...demoBase("bdpi", "Territorial context"),
+    warnings: ["DEMO territorial record. Reconcile real cases against BDPI and community registries."],
+    records: [
+      {
+        label: "DEMO Comunidad Nativa Inambari",
+        category: "Comunidad nativa / zona de influencia",
+        sourceLabel: "BDPI DEMO",
+        overlapHectares: measured.areaHectares,
+        overlapPercentOfAoi: measured.percentOfAoi,
+        geometry: DEMO_BDPI_GEOMETRY,
+        raw: { demo: true },
+      },
+    ],
+  };
+}
+
+export function demoWater(aoi: GeoGeometry): SourceResult<ContextRecord> {
+  const measured = overlap(aoi, DEMO_WATER_GEOMETRY);
+  return {
+    ...demoBase("ana", "Water context"),
+    warnings: ["DEMO water-management context. Real cases require ANA/SNIRH confirmation."],
+    records: [
+      {
+        label: "DEMO Cuenca Tambopata - Inambari",
+        category: "Unidad hidrografica / faja riberenya",
+        sourceLabel: "ANA DEMO",
+        overlapHectares: measured.areaHectares,
+        overlapPercentOfAoi: measured.percentOfAoi,
+        geometry: DEMO_WATER_GEOMETRY,
+        raw: { demo: true },
+      },
     ],
   };
 }

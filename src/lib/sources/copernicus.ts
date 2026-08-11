@@ -19,6 +19,9 @@ export interface SatelliteSceneRecord {
   cloudCoverPercent: number | null;
   platform: string | null;
   processingLevel: string | null;
+  /** Optional pre-computed vegetation signal. Only present when a verified upstream process supplies it. */
+  vegetationChangePercent?: number | null;
+  vegetationInterpretation?: string | null;
   /** Quicklook/thumbnail served by Copernicus, when the item exposes one. */
   previewUrl: string | null;
   itemUrl: string | null;

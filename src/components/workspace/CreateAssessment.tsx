@@ -16,7 +16,7 @@ interface CreateAssessmentProps {
 }
 
 const MAX_FILE_BYTES = 12 * 1024 * 1024;
-const INVESTOR_DEMO_KML = "/demo/legalmine-investor-concession-demo.kml";
+const INVESTOR_DEMO_KMZ = "/demo/legalmine-investor-full-analysis-demo.kmz";
 
 function arrayBufferToBase64(buffer: ArrayBuffer): string {
   let binary = "";
@@ -38,6 +38,7 @@ export default function CreateAssessment({
   const [fileName, setFileName] = useState<string | null>(null);
   const [fileText, setFileText] = useState<string | null>(null);
   const [fileBase64, setFileBase64] = useState<string | null>(null);
+  const [investorDemo, setInvestorDemo] = useState(false);
   const [latitude, setLatitude] = useState("");
   const [longitude, setLongitude] = useState("");
   const [radius, setRadius] = useState("1000");
@@ -63,6 +64,7 @@ export default function CreateAssessment({
       setFileText(await file.text());
       setFileBase64(null);
     }
+    setInvestorDemo(false);
     setFileName(file.name);
     if (!name.trim()) setName(file.name.replace(/\.[^/.]+$/, ""));
     track("geometry_uploaded", { format: file.name.split(".").pop(), bytes: file.size });
@@ -96,19 +98,20 @@ export default function CreateAssessment({
     }
   }
 
-  async function loadInvestorDemoKml() {
+  async function loadInvestorDemoKmz() {
     setSubmitting(true);
     setError(null);
     try {
-      const response = await fetch(INVESTOR_DEMO_KML);
-      if (!response.ok) throw new Error(`No se pudo cargar el KML demo (${response.status}).`);
-      const text = await response.text();
+      const response = await fetch(INVESTOR_DEMO_KMZ);
+      if (!response.ok) throw new Error(`No se pudo cargar el KMZ demo (${response.status}).`);
+      const buffer = await response.arrayBuffer();
       setMode("file");
-      setName("Investor Demo - Concession Screening");
-      setFileName("legalmine-investor-concession-demo.kml");
-      setFileText(text);
-      setFileBase64(null);
-      track("investor_demo_kml_loaded", { source: "predefined_kml" });
+      setName("Investor Demo - Full Due Diligence");
+      setFileName("legalmine-investor-full-analysis-demo.kmz");
+      setFileText(null);
+      setFileBase64(arrayBufferToBase64(buffer));
+      setInvestorDemo(true);
+      track("investor_demo_kml_loaded", { source: "predefined_kmz" });
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : "No se pudo cargar el KML demo.");
     } finally {
@@ -132,6 +135,7 @@ export default function CreateAssessment({
         geometryText: fileText,
         geometryBase64: fileBase64,
         filename: fileName,
+        investorDemo,
       });
       return;
     }
@@ -269,27 +273,27 @@ export default function CreateAssessment({
                   Demo para inversionistas
                 </p>
                 <p className="mt-1 text-[11px] leading-relaxed text-gray-400">
-                  Precarga un KML de ejemplo para recorrer el flujo completo —concesión, mapa de evidencia,
-                  radar y dossier— sin preparar un archivo propio.
+                  Precarga un KMZ de ejemplo para recorrer el flujo completo: concesion minera, REINFO,
+                  areas protegidas, agua, territorio, vegetacion, mapa, radar y dossier.
                 </p>
               </div>
               <div className="flex shrink-0 flex-wrap gap-2">
                 <button
                   type="button"
                   disabled={disabled}
-                  onClick={() => void loadInvestorDemoKml()}
+                  onClick={() => void loadInvestorDemoKmz()}
                   className="inline-flex items-center gap-1.5 rounded-lg bg-blue-600 px-3 py-2 text-[11px] font-semibold text-white transition hover:bg-blue-500 disabled:opacity-60"
                 >
                   <Upload className="h-3.5 w-3.5" />
-                  Precargar KML
+                  Precargar KMZ
                 </button>
                 <a
-                  href={INVESTOR_DEMO_KML}
+                  href={INVESTOR_DEMO_KMZ}
                   download
                   className="inline-flex items-center gap-1.5 rounded-lg border border-white/15 px-3 py-2 text-[11px] font-semibold text-gray-300 transition hover:bg-white/5"
                 >
                   <Download className="h-3.5 w-3.5" />
-                  Descargar
+                  Descargar KMZ
                 </a>
               </div>
             </div>

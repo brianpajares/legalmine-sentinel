@@ -520,6 +520,26 @@ const VEGETATION_CHANGE: Rule = {
   evaluate(bundle) {
     const source = bundle.satellite;
     const sceneCount = source.records.length;
+    const computed = source.records
+      .map((record) => record.vegetationChangePercent)
+      .filter((value): value is number => typeof value === "number" && Number.isFinite(value));
+
+    if (isConclusive(source.status) && computed.length > 0) {
+      const strongest = computed.reduce((max, value) => (Math.abs(value) > Math.abs(max) ? value : max), computed[0]);
+      const magnitude = Math.abs(strongest);
+      return {
+        factorScore: Math.min(100, Math.round(magnitude * 4 * 100) / 100),
+        rationale:
+          `${sceneCount} Sentinel-2 scene(s) were catalogued and a vegetation-change indicator was supplied. ` +
+          `The strongest reported change is ${strongest}% (${strongest < 0 ? "loss" : "gain"} signal).`,
+        evidenceIds: evidenceIdsFor(bundle, "copernicus"),
+        dataStatus: source.status,
+        inconclusive: false,
+        nextStep:
+          "Review the underlying before/after scenes and confirm the vegetation signal with a calibrated NDVI/NDWI workflow before operational reliance.",
+      };
+    }
+
     const reason = isConclusive(source.status)
       ? `${sceneCount} Sentinel-2 scene(s) were catalogued for this area, but this build does not compute a vegetation index, so no change value was derived.`
       : `The satellite catalogue returned ${source.status.replace(/_/g, " ").toLowerCase()}, so no scene metadata is available.`;
