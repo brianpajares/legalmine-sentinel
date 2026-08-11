@@ -18,6 +18,7 @@ export type AnalyticsEvent =
   | "assessment_completed"
   | "factor_opened"
   | "report_generated"
+  | "report_saved_to_drive"
   | "pilot_feedback_submitted"
   | "request_pilot_clicked"
   | "pricing_view"

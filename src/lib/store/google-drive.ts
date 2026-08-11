@@ -1,5 +1,5 @@
 import type { Assessment, Lead, PilotFeedback, Project } from "@/types/assessment";
-import { mean, median, type Store, type TractionMetrics } from "./index";
+import { mean, median, type SavedDossier, type Store, type TractionMetrics } from "./index";
 
 interface GoogleDriveStoreOptions {
   clientId?: string;
@@ -134,6 +134,7 @@ async function driveUpload<T>(
   metadata: Record<string, unknown>,
   content: string,
   method: "POST" | "PATCH",
+  contentType = "application/json; charset=UTF-8",
 ): Promise<T> {
   const token = await accessToken(ctx);
   const boundary = `legalmine_${Date.now()}_${crypto.randomUUID()}`;
@@ -143,7 +144,7 @@ async function driveUpload<T>(
     "",
     JSON.stringify(metadata),
     `--${boundary}`,
-    "Content-Type: application/json; charset=UTF-8",
+    `Content-Type: ${contentType}`,
     "",
     content,
     `--${boundary}--`,
@@ -193,6 +194,36 @@ async function ensureFolderId(ctx: DriveContext): Promise<string> {
     body: JSON.stringify({
       name: ctx.folderName,
       mimeType: "application/vnd.google-apps.folder",
+    }),
+  });
+  return created.id;
+}
+
+/**
+ * Finds or creates the `Dossiers/` subfolder inside the LegalMine folder.
+ *
+ * Kept separate from the database file so browsing the folder in Drive shows
+ * one JSON (state) plus a folder of readable dossiers — a layout the customer
+ * can scan without knowing anything about this application.
+ */
+async function ensureDossiersFolderId(ctx: DriveContext): Promise<string> {
+  const parent = await ensureFolderId(ctx);
+  const query = [
+    `name=${driveQueryLiteral("Dossiers")}`,
+    `${driveQueryLiteral(parent)} in parents`,
+    "mimeType='application/vnd.google-apps.folder'",
+    "trashed=false",
+  ].join(" and ");
+  const existing = await findFile(ctx, query);
+  if (existing) return existing.id;
+
+  const created = await driveRequest<DriveFile>(ctx, "files?fields=id,name", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      name: "Dossiers",
+      mimeType: "application/vnd.google-apps.folder",
+      parents: [parent],
     }),
   });
   return created.id;
@@ -374,6 +405,58 @@ export function createGoogleDriveStore(options: GoogleDriveStoreOptions): Store 
         },
         medianTimeSavedMinutes: median(timeSaved),
       };
+    },
+
+    async saveDossierFile({ assessmentId, fileName, html }): Promise<SavedDossier | null> {
+      const folderId = await ensureDossiersFolderId(ctx);
+
+      // Replace an existing file with the same name so re-generating a dossier
+      // does not accumulate identically-titled copies. Two runs of the same
+      // assessment produce the same filename by design — one canonical file per
+      // assessment, kept in step with the JSON state.
+      const existing = await findFile(
+        ctx,
+        [
+          `name=${driveQueryLiteral(fileName)}`,
+          `${driveQueryLiteral(folderId)} in parents`,
+          "trashed=false",
+        ].join(" and "),
+      );
+
+      const metadataProps = {
+        assessmentId,
+        source: "legalmine-sentinel",
+        renderedAt: new Date().toISOString(),
+      };
+
+      const uploaded = existing
+        ? await driveUpload<DriveFile & { webViewLink?: string }>(
+            ctx,
+            `files/${encodeURIComponent(existing.id)}?uploadType=multipart&fields=id,name,webViewLink`,
+            { name: fileName, mimeType: "text/html", appProperties: metadataProps },
+            html,
+            "PATCH",
+            "text/html; charset=UTF-8",
+          )
+        : await driveUpload<DriveFile & { webViewLink?: string }>(
+            ctx,
+            "files?uploadType=multipart&fields=id,name,webViewLink",
+            {
+              name: fileName,
+              parents: [folderId],
+              mimeType: "text/html",
+              appProperties: metadataProps,
+            },
+            html,
+            "POST",
+            "text/html; charset=UTF-8",
+          );
+
+      const webViewLink =
+        uploaded.webViewLink ??
+        `https://drive.google.com/file/d/${uploaded.id}/view`;
+
+      return { fileId: uploaded.id, fileName: uploaded.name, webViewLink };
     },
   };
 }

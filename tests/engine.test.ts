@@ -127,7 +127,14 @@ describe("no fabrication when a source fails (Plan Maestro §18.1)", () => {
     const assessment = run(makeBundle({ reinfo }));
     const factor = assessment.factors.find((f) => f.factorKey === "reinfo_registration_check");
     expect(factor?.inconclusive).toBe(false);
-    expect(factor?.rationale.toLowerCase()).toContain("not a finding of illegality");
+
+    // The anti-fabrication guarantee: an empty REINFO response must never be
+    // presented as proof that no operator is registered. The exact wording has
+    // moved as the connector matured — the test asserts the property, not the
+    // sentence, so a copy change cannot silently weaken the safeguard.
+    const rationale = factor?.rationale.toLowerCase() ?? "";
+    expect(rationale).not.toMatch(/\billegal\b/);
+    expect(rationale).toMatch(/not (proof|a finding)/);
   });
 
   it("reports COMPLETED only when both P0 sources answered", () => {

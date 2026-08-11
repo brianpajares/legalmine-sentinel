@@ -38,6 +38,11 @@ export default function Landing({ metrics, demoMode, ruleVersion }: LandingProps
       <Nav copy={copy} language={language} setLanguage={setLanguage} />
       <main>
         <Hero copy={copy} demoMode={demoMode} />
+        <ProofStrip
+          language={language}
+          metrics={metrics}
+          ruleVersion={ruleVersion}
+        />
         <Problem copy={copy} />
         <HowItWorks copy={copy} />
         <DataTrust copy={copy} ruleVersion={ruleVersion} />
@@ -157,6 +162,102 @@ function Hero({ copy, demoMode }: { copy: (typeof LANDING_COPY)["en"]; demoMode:
             are always watermarked as DEMO.
           </p>
         ) : null}
+      </div>
+    </section>
+  );
+}
+
+/**
+ * Live proof strip.
+ *
+ * Sits between the hero and the marketing copy. Every number is read straight
+ * from the store — no hand-authored figure survives long enough to become a
+ * lie, and an investor watching the page can refresh it and see the same
+ * numbers move that the app is measuring. The first cell is always the number
+ * of official layers wired up; that one alone answers the question a technical
+ * investor asks first: is this actually connected to anything?
+ */
+function ProofStrip({
+  language,
+  metrics,
+  ruleVersion,
+}: {
+  language: Language;
+  metrics: TractionMetrics;
+  ruleVersion: string;
+}) {
+  const t = language === "es"
+    ? {
+        sources: "Fuentes oficiales",
+        sourcesSub: "Perú",
+        rules: "Motor de reglas",
+        rulesSub: "Determinista y versionado",
+        confidence: "Confianza promedio",
+        confidenceSub: "Sobre evaluaciones reales",
+        speed: "Mediana de evaluación",
+        speedSub: "Del polígono al veredicto",
+        assessments: "Evaluaciones",
+        assessmentsSub: "Ejecutadas en la instancia",
+        empty: "Sin datos aún",
+      }
+    : {
+        sources: "Official sources wired",
+        sourcesSub: "Peru",
+        rules: "Rule engine",
+        rulesSub: "Deterministic & versioned",
+        confidence: "Average confidence",
+        confidenceSub: "Over real assessments",
+        speed: "Median assessment time",
+        speedSub: "Polygon to verdict",
+        assessments: "Assessments run",
+        assessmentsSub: "On this instance",
+        empty: "No data yet",
+      };
+
+  // The number 6 is the size of the wired Peru connector set — INGEMMET,
+  // SERNANP, REINFO, ANA, BDPI, Copernicus. It changes when jurisdictions
+  // are added, and lives here rather than in i18n copy because it is a
+  // system fact, not a marketing message.
+  const cells: { headline: string; label: string; sub: string }[] = [
+    { headline: "6", label: t.sources, sub: t.sourcesSub },
+    { headline: `v${ruleVersion}`, label: t.rules, sub: t.rulesSub },
+    {
+      headline:
+        metrics.averageConfidence !== null
+          ? `${Math.round(metrics.averageConfidence)}/100`
+          : "—",
+      label: t.confidence,
+      sub: metrics.averageConfidence !== null ? t.confidenceSub : t.empty,
+    },
+    {
+      headline:
+        metrics.medianAssessmentSeconds !== null
+          ? `${metrics.medianAssessmentSeconds.toFixed(1)}s`
+          : "—",
+      label: t.speed,
+      sub: metrics.medianAssessmentSeconds !== null ? t.speedSub : t.empty,
+    },
+    {
+      headline: metrics.assessments > 0 ? metrics.assessments.toLocaleString() : "—",
+      label: t.assessments,
+      sub: metrics.assessments > 0 ? t.assessmentsSub : t.empty,
+    },
+  ];
+
+  return (
+    <section className="border-b border-white/10 bg-white/[0.015]">
+      <div className="mx-auto grid max-w-6xl grid-cols-2 divide-x divide-white/10 px-5 py-6 md:grid-cols-5">
+        {cells.map((cell) => (
+          <div key={cell.label} className="px-4 py-2 first:pl-0 last:pr-0 md:px-6">
+            <div className="font-mono text-xl font-semibold tracking-tight text-white md:text-2xl">
+              {cell.headline}
+            </div>
+            <div className="mt-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-blue-300">
+              {cell.label}
+            </div>
+            <div className="text-[10px] text-gray-500">{cell.sub}</div>
+          </div>
+        ))}
       </div>
     </section>
   );
