@@ -301,6 +301,115 @@ async function mutateDatabase(
   await writeDatabase(ctx, fileId, db);
 }
 
+export interface DriveProbeResult {
+  configured: boolean;
+  missing: string[];
+  ok: boolean;
+  ownerEmail: string | null;
+  folder: { id: string; name: string; webViewLink: string } | null;
+  dossiersFolder: { id: string; name: string; webViewLink: string } | null;
+  databaseFile: { id: string; name: string; webViewLink: string } | null;
+  error: string | null;
+  checkedAt: string;
+}
+
+/**
+ * End-to-end health check for the Drive integration.
+ *
+ * Runs the actual OAuth exchange and touches the folders the store depends on,
+ * so a green result means "the next dossier will land in Drive," not "the
+ * environment variables happen to look right." Every failure mode is reported
+ * with the specific reason — the point is to make the setup debuggable without
+ * reading logs.
+ */
+export async function probeGoogleDrive(options: GoogleDriveStoreOptions): Promise<DriveProbeResult> {
+  const now = () => new Date().toISOString();
+
+  const missing: string[] = [];
+  if (!options.clientId?.trim()) missing.push("GOOGLE_DRIVE_CLIENT_ID");
+  if (!options.clientSecret?.trim()) missing.push("GOOGLE_DRIVE_CLIENT_SECRET");
+  if (!options.refreshToken?.trim()) missing.push("GOOGLE_DRIVE_REFRESH_TOKEN");
+  if (missing.length > 0) {
+    return {
+      configured: false,
+      missing,
+      ok: false,
+      ownerEmail: options.ownerEmail?.trim() ?? null,
+      folder: null,
+      dossiersFolder: null,
+      databaseFile: null,
+      error: `Missing required environment variables: ${missing.join(", ")}.`,
+      checkedAt: now(),
+    };
+  }
+
+  const ctx: DriveContext = {
+    clientId: options.clientId!.trim(),
+    clientSecret: options.clientSecret!.trim(),
+    refreshToken: options.refreshToken!.trim(),
+    fileId: options.fileId?.trim() || undefined,
+    folderId: options.folderId?.trim() || undefined,
+    folderName: options.folderName?.trim() || DEFAULT_FOLDER_NAME,
+    fileName: options.fileName?.trim() || DEFAULT_FILE_NAME,
+    ownerEmail: options.ownerEmail?.trim() || undefined,
+  };
+
+  const withLink = (file: { id: string; name: string; webViewLink?: string }) => ({
+    id: file.id,
+    name: file.name,
+    webViewLink:
+      file.webViewLink ?? `https://drive.google.com/drive/folders/${file.id}`,
+  });
+
+  try {
+    const folderId = await ensureFolderId(ctx);
+    const folderMeta = await driveRequest<{ id: string; name: string; webViewLink?: string }>(
+      ctx,
+      `files/${encodeURIComponent(folderId)}?fields=id,name,webViewLink&supportsAllDrives=true`,
+    );
+
+    const dossiersId = await ensureDossiersFolderId(ctx);
+    const dossiersMeta = await driveRequest<{ id: string; name: string; webViewLink?: string }>(
+      ctx,
+      `files/${encodeURIComponent(dossiersId)}?fields=id,name,webViewLink&supportsAllDrives=true`,
+    );
+
+    const dbFileId = await ensureDatabaseFile(ctx);
+    const dbMeta = await driveRequest<{ id: string; name: string; webViewLink?: string }>(
+      ctx,
+      `files/${encodeURIComponent(dbFileId)}?fields=id,name,webViewLink&supportsAllDrives=true`,
+    );
+
+    return {
+      configured: true,
+      missing: [],
+      ok: true,
+      ownerEmail: ctx.ownerEmail ?? null,
+      folder: withLink(folderMeta),
+      dossiersFolder: withLink(dossiersMeta),
+      databaseFile: withLink({
+        ...dbMeta,
+        webViewLink:
+          dbMeta.webViewLink ?? `https://drive.google.com/file/d/${dbMeta.id}/view`,
+      }),
+      error: null,
+      checkedAt: now(),
+    };
+  } catch (error) {
+    return {
+      configured: true,
+      missing: [],
+      ok: false,
+      ownerEmail: ctx.ownerEmail ?? null,
+      folder: null,
+      dossiersFolder: null,
+      databaseFile: null,
+      error: error instanceof Error ? error.message : String(error),
+      checkedAt: now(),
+    };
+  }
+}
+
 export function createGoogleDriveStore(options: GoogleDriveStoreOptions): Store {
   const ctx: DriveContext = {
     clientId: required(options.clientId, "GOOGLE_DRIVE_CLIENT_ID"),

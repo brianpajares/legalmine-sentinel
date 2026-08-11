@@ -24,6 +24,7 @@ import EvidenceDrawer from "./EvidenceDrawer";
 import FeedbackForm from "./FeedbackForm";
 import PortfolioRadar from "./PortfolioRadar";
 import MapPanel from "./MapPanel";
+import StorageBadge from "./StorageBadge";
 import { track } from "@/lib/analytics/client";
 import { saveReportFallback } from "@/components/report/ClientReportFallback";
 
@@ -208,6 +209,7 @@ function TopBar({ onReset, hasProject }: { onReset: () => void; hasProject: bool
           </span>
         </Link>
         <div className="flex items-center gap-2">
+          <StorageBadge />
           {hasProject ? (
             <button
               type="button"
