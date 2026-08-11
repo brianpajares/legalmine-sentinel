@@ -59,6 +59,18 @@ export interface Store {
     fileName: string;
     html: string;
   }): Promise<SavedDossier | null>;
+  /**
+   * Persists the spreadsheet companion to the dossier.
+   *
+   * Operators work in Excel after they read the report — filtering concessions,
+   * sorting by overlap, pasting rows into a memo. Storing it beside the dossier
+   * means the workbook and the narrative always describe the same run.
+   */
+  saveDataWorkbook?(input: {
+    assessmentId: string;
+    fileName: string;
+    xml: string;
+  }): Promise<SavedDossier | null>;
 }
 
 export function median(values: number[]): number | null {

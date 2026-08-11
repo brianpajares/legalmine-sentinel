@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState, useSyncExternalStore } from "react";
 import Link from "next/link";
 import {
   AlertTriangle,
@@ -25,21 +25,36 @@ import FeedbackForm from "./FeedbackForm";
 import PortfolioRadar from "./PortfolioRadar";
 import MapPanel from "./MapPanel";
 import StorageBadge from "./StorageBadge";
+import ScreeningProgress from "./ScreeningProgress";
 import { track } from "@/lib/analytics/client";
 import { saveReportFallback } from "@/components/report/ClientReportFallback";
+import {
+  getLanguageSnapshot,
+  getServerLanguageSnapshot,
+  setLanguage,
+  subscribeLanguage,
+  WORKSPACE_COPY,
+  type Language,
+  type WorkspaceCopy,
+} from "@/lib/i18n/workspace";
 
-type Tab = "risk" | "sources" | "map" | "gaps" | "feedback" | "portfolio";
+type Tab = "risk" | "sources" | "map" | "gaps" | "portfolio" | "feedback";
 
-const TABS: { id: Tab; label: string; icon: typeof ShieldAlert }[] = [
-  { id: "risk", label: "Risk Explorer", icon: ShieldAlert },
-  { id: "sources", label: "Source Check", icon: Database },
-  { id: "map", label: "Mapa de evidencia", icon: Layers },
-  { id: "gaps", label: "Not Verified", icon: AlertTriangle },
-  { id: "portfolio", label: "Opportunity Radar", icon: Compass },
-  { id: "feedback", label: "Pilot Feedback", icon: MessageSquare },
+const TAB_ORDER: { id: Tab; icon: typeof ShieldAlert }[] = [
+  { id: "risk", icon: ShieldAlert },
+  { id: "sources", icon: Database },
+  { id: "map", icon: Layers },
+  { id: "gaps", icon: AlertTriangle },
+  { id: "portfolio", icon: Compass },
+  { id: "feedback", icon: MessageSquare },
 ];
 
 export default function Workspace({ demoMode }: { demoMode: boolean }) {
+  const language = useSyncExternalStore(
+    subscribeLanguage,
+    getLanguageSnapshot,
+    getServerLanguageSnapshot,
+  );
   const [project, setProject] = useState<Project | null>(null);
   const [assessment, setAssessment] = useState<Assessment | null>(null);
   const [warnings, setWarnings] = useState<string[]>([]);
@@ -47,6 +62,8 @@ export default function Workspace({ demoMode }: { demoMode: boolean }) {
   const [error, setError] = useState<string | null>(null);
   const [tab, setTab] = useState<Tab>("risk");
   const [drawer, setDrawer] = useState<Evidence[] | null>(null);
+
+  const copy = useMemo(() => WORKSPACE_COPY[language], [language]);
 
   async function runAssessment(target: Project) {
     setRunning(true);
@@ -63,7 +80,10 @@ export default function Workspace({ demoMode }: { demoMode: boolean }) {
         detail?: string;
       };
       if (!response.ok || !payload.assessment) {
-        setError([payload.error, payload.detail].filter(Boolean).join(" ") || "The assessment failed.");
+        setError(
+          [payload.error, payload.detail].filter(Boolean).join(" ") ||
+            "No se pudo completar el análisis.",
+        );
         return;
       }
       saveReportFallback(payload.assessment, target);
@@ -79,7 +99,7 @@ export default function Workspace({ demoMode }: { demoMode: boolean }) {
         confidence: payload.assessment.confidence,
       });
     } catch (caught) {
-      setError(caught instanceof Error ? caught.message : "Network error.");
+      setError(caught instanceof Error ? caught.message : "Error de red.");
     } finally {
       setRunning(false);
     }
@@ -99,16 +119,25 @@ export default function Workspace({ demoMode }: { demoMode: boolean }) {
     setError(null);
   }
 
-  return (
-    <div className="min-h-screen bg-[#070a13]">
-      <TopBar onReset={reset} hasProject={Boolean(project)} />
+  const activeTab = copy.tabs[tab];
 
-      <main className="mx-auto max-w-6xl px-5 py-8">
+  return (
+    <div className="min-h-screen bg-[#080b14]">
+      <TopBar
+        copy={copy}
+        language={language}
+        onLanguageChange={setLanguage}
+        onReset={reset}
+        hasProject={Boolean(project)}
+      />
+
+      <main className="mx-auto max-w-[1400px] px-5 py-7">
         {!project ? (
           <CreateAssessment demoMode={demoMode} onProjectReady={handleProjectReady} busy={running} />
         ) : (
-          <div className="space-y-6">
+          <div className="space-y-5">
             <ProjectHeader
+              copy={copy}
               project={project}
               assessment={assessment}
               running={running}
@@ -123,69 +152,111 @@ export default function Workspace({ demoMode }: { demoMode: boolean }) {
               </p>
             ) : null}
 
-            {running && !assessment ? (
-              <Panel className="p-10 text-center">
-                <div className="mx-auto h-8 w-8 animate-spin rounded-full border-b-2 border-t-2 border-blue-500" />
-                <p className="mt-4 text-sm font-semibold text-gray-300">
-                  Querying sources and applying the rule set…
-                </p>
-                <p className="mt-1 text-xs text-gray-500">
-                  Every connector has its own timeout. Sources that do not answer are reported as
-                  unavailable rather than waited on indefinitely.
-                </p>
-              </Panel>
-            ) : null}
+            {running && !assessment ? <ScreeningProgress copy={copy} /> : null}
 
             {assessment ? (
-              <>
-                <nav className="flex flex-wrap gap-2 border-b border-white/10 pb-3">
-                  {TABS.map((item) => {
-                    const Icon = item.icon;
-                    const active = tab === item.id;
-                    return (
-                      <button
-                        key={item.id}
-                        type="button"
-                        onClick={() => setTab(item.id)}
-                        className={`inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold transition ${
-                          active
-                            ? "bg-blue-600/20 text-blue-300"
-                            : "text-gray-400 hover:bg-white/5 hover:text-gray-200"
-                        }`}
-                      >
-                        <Icon className="h-3.5 w-3.5" />
-                        {item.label}
-                        {item.id === "gaps" && assessment.missingChecks.length > 0 ? (
-                          <span className="ml-1 rounded-full bg-amber-500/20 px-1.5 text-[10px] font-bold text-amber-300">
-                            {assessment.missingChecks.length}
-                          </span>
-                        ) : null}
-                      </button>
-                    );
-                  })}
+              // Sidebar layout: six destinations do not fit legibly in a
+              // horizontal strip, and a vertical rail leaves room to say what
+              // each view answers before the operator commits to a click.
+              <div className="grid gap-5 lg:grid-cols-[236px_minmax(0,1fr)]">
+                <nav className="lg:sticky lg:top-[76px] lg:self-start">
+                  <p className="px-3 pb-2 text-[10px] font-semibold uppercase tracking-[0.16em] text-gray-600">
+                    {copy.nav.sectionLabel}
+                  </p>
+                  <ul className="space-y-1">
+                    {TAB_ORDER.map(({ id, icon: Icon }) => {
+                      const item = copy.tabs[id];
+                      const active = tab === id;
+                      const badge =
+                        id === "gaps" && assessment.missingChecks.length > 0
+                          ? assessment.missingChecks.length
+                          : null;
+                      return (
+                        <li key={id}>
+                          <button
+                            type="button"
+                            onClick={() => setTab(id)}
+                            aria-current={active ? "page" : undefined}
+                            className={`group w-full rounded-xl border px-3 py-2.5 text-left transition ${
+                              active
+                                ? "border-blue-500/40 bg-blue-600/15"
+                                : "border-transparent hover:border-white/10 hover:bg-white/[0.04]"
+                            }`}
+                          >
+                            <span className="flex items-center gap-2">
+                              <Icon
+                                className={`h-3.5 w-3.5 flex-none ${
+                                  active ? "text-blue-300" : "text-gray-500 group-hover:text-gray-300"
+                                }`}
+                              />
+                              <span
+                                className={`flex-1 text-xs font-semibold ${
+                                  active ? "text-blue-100" : "text-gray-300"
+                                }`}
+                              >
+                                {item.label}
+                              </span>
+                              {badge !== null ? (
+                                <span className="rounded-full bg-amber-500/20 px-1.5 text-[10px] font-bold text-amber-300">
+                                  {badge}
+                                </span>
+                              ) : null}
+                            </span>
+                            <span
+                              className={`mt-1 block pl-[22px] text-[10.5px] leading-snug ${
+                                active ? "text-blue-200/70" : "text-gray-600"
+                              }`}
+                            >
+                              {item.purpose}
+                            </span>
+                          </button>
+                        </li>
+                      );
+                    })}
+                  </ul>
                 </nav>
 
-                {tab === "risk" ? (
-                  <RiskExplorer assessment={assessment} onOpenEvidence={(items) => setDrawer(items)} />
-                ) : null}
-                {tab === "sources" ? <SourceCheck sources={assessment.sourceStatus} /> : null}
-                {tab === "gaps" ? <MissingData assessment={assessment} /> : null}
-                {tab === "portfolio" ? <PortfolioRadar currentAssessment={assessment} /> : null}
-                {tab === "feedback" ? (
-                  <FeedbackForm assessmentId={assessment.id} projectId={assessment.projectId} />
-                ) : null}
-                {tab === "map" ? (
-                  <div className="h-[640px]">
-                    <MapPanel
-                      aoi={project.geometry}
-                      evidence={assessment.evidence}
-                      sources={assessment.sourceStatus}
-                      center={assessment.geometrySummary.centroid}
+                <section className="min-w-0 space-y-4">
+                  {/* Guidance sits above every panel: the staff using this daily
+                      should never have to guess what they are looking at. */}
+                  <div className="rounded-xl border border-white/10 bg-white/[0.03] px-4 py-3">
+                    <h2 className="text-sm font-bold text-white">{activeTab.label}</h2>
+                    <p className="mt-1 text-[11.5px] leading-relaxed text-gray-400">
+                      {activeTab.guidance}
+                    </p>
+                  </div>
+
+                  {tab === "risk" ? (
+                    <RiskExplorer
+                      assessment={assessment}
+                      onOpenEvidence={(items) => setDrawer(items)}
+                    />
+                  ) : null}
+                  {tab === "sources" ? <SourceCheck sources={assessment.sourceStatus} /> : null}
+                  {tab === "gaps" ? <MissingData assessment={assessment} /> : null}
+                  {tab === "portfolio" ? (
+                    <PortfolioRadar
+                      currentAssessment={assessment}
+                      project={project}
                       onSelectEvidence={(item) => setDrawer([item])}
                     />
-                  </div>
-                ) : null}
-              </>
+                  ) : null}
+                  {tab === "feedback" ? (
+                    <FeedbackForm assessmentId={assessment.id} projectId={assessment.projectId} />
+                  ) : null}
+                  {tab === "map" ? (
+                    <div className="h-[640px]">
+                      <MapPanel
+                        aoi={project.geometry}
+                        evidence={assessment.evidence}
+                        sources={assessment.sourceStatus}
+                        center={assessment.geometrySummary.centroid}
+                        onSelectEvidence={(item) => setDrawer([item])}
+                      />
+                    </div>
+                  ) : null}
+                </section>
+              </div>
             ) : null}
           </div>
         )}
@@ -196,10 +267,22 @@ export default function Workspace({ demoMode }: { demoMode: boolean }) {
   );
 }
 
-function TopBar({ onReset, hasProject }: { onReset: () => void; hasProject: boolean }) {
+function TopBar({
+  copy,
+  language,
+  onLanguageChange,
+  onReset,
+  hasProject,
+}: {
+  copy: WorkspaceCopy;
+  language: Language;
+  onLanguageChange: (next: Language) => void;
+  onReset: () => void;
+  hasProject: boolean;
+}) {
   return (
-    <header className="sticky top-0 z-30 border-b border-white/10 bg-[#070a13]/90 backdrop-blur-lg">
-      <div className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-5 py-3">
+    <header className="sticky top-0 z-30 border-b border-white/10 bg-[#080b14]/90 backdrop-blur-lg">
+      <div className="mx-auto flex max-w-[1400px] items-center justify-between gap-4 px-5 py-3">
         <Link href="/" className="flex items-center gap-2.5">
           <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-blue-600">
             <ShieldAlert className="h-4 w-4 text-white" />
@@ -209,7 +292,24 @@ function TopBar({ onReset, hasProject }: { onReset: () => void; hasProject: bool
           </span>
         </Link>
         <div className="flex items-center gap-2">
-          <StorageBadge />
+          <StorageBadge copy={copy} />
+          <div className="flex overflow-hidden rounded-lg border border-white/15">
+            {(["es", "en"] as const).map((code) => (
+              <button
+                key={code}
+                type="button"
+                onClick={() => onLanguageChange(code)}
+                aria-pressed={language === code}
+                className={`px-2 py-1 text-[10px] font-bold uppercase transition ${
+                  language === code
+                    ? "bg-white/10 text-white"
+                    : "text-gray-500 hover:text-gray-300"
+                }`}
+              >
+                {code}
+              </button>
+            ))}
+          </div>
           {hasProject ? (
             <button
               type="button"
@@ -217,14 +317,14 @@ function TopBar({ onReset, hasProject }: { onReset: () => void; hasProject: bool
               className="inline-flex items-center gap-1.5 rounded-lg border border-white/15 px-3 py-1.5 text-xs font-semibold text-gray-300 transition hover:bg-white/5"
             >
               <Plus className="h-3.5 w-3.5" />
-              New assessment
+              {copy.nav.newAssessment}
             </button>
           ) : null}
           <Link
             href="/pricing"
             className="rounded-lg px-3 py-1.5 text-xs font-semibold text-gray-400 transition hover:text-white"
           >
-            Pricing
+            {copy.nav.pricing}
           </Link>
         </div>
       </div>
@@ -233,12 +333,14 @@ function TopBar({ onReset, hasProject }: { onReset: () => void; hasProject: bool
 }
 
 function ProjectHeader({
+  copy,
   project,
   assessment,
   running,
   warnings,
   onRerun,
 }: {
+  copy: WorkspaceCopy;
   project: Project;
   assessment: Assessment | null;
   running: boolean;
@@ -251,8 +353,9 @@ function ProjectHeader({
         <div className="min-w-0">
           <h1 className="text-lg font-bold tracking-tight text-white">{project.name}</h1>
           <p className="mt-1 text-xs text-gray-500">
-            {project.geometrySummary.areaHectares.toLocaleString("en-US")} ha ·{" "}
-            {project.geometrySummary.format.toUpperCase()} input · geometry{" "}
+            {project.geometrySummary.areaHectares.toLocaleString("es-PE")} {copy.header.areaLabel} ·{" "}
+            {project.geometrySummary.format.toUpperCase()} {copy.header.inputLabel} ·{" "}
+            {copy.header.geometryLabel}{" "}
             <span className="font-mono">{project.geometrySummary.geometryHash.slice(0, 12)}…</span>
           </p>
         </div>
@@ -263,6 +366,7 @@ function ProjectHeader({
               <ConfidenceBadge level={assessment.confidenceLevel} score={assessment.confidence} />
               <Link
                 href={`/report/${assessment.id}`}
+                title={copy.header.reportHint}
                 onClick={() => {
                   saveReportFallback(assessment, project);
                   track("report_generated", { assessment_id: assessment.id });
@@ -270,7 +374,7 @@ function ProjectHeader({
                 className="inline-flex items-center gap-1.5 rounded-lg bg-blue-600 px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-blue-500"
               >
                 <FileText className="h-3.5 w-3.5" />
-                Ver / descargar informe
+                {copy.header.viewReport}
               </Link>
             </>
           ) : null}
@@ -280,7 +384,7 @@ function ProjectHeader({
             disabled={running}
             className="rounded-lg border border-white/15 px-3 py-1.5 text-xs font-semibold text-gray-300 transition hover:bg-white/5 disabled:opacity-60"
           >
-            {running ? "Running…" : "Re-run"}
+            {running ? copy.header.running : copy.header.rerun}
           </button>
         </div>
       </div>
@@ -295,9 +399,9 @@ function ProjectHeader({
 
       {assessment?.status === "PARTIAL" ? (
         <p className="mt-4 rounded-lg border border-amber-500/25 bg-amber-500/10 px-3 py-2.5 text-[11px] leading-relaxed text-amber-200">
-          <strong className="font-semibold">Partial assessment.</strong> At least one primary source
-          did not answer, so this result covers fewer checks than a complete screening. See Source
-          Check and Not Verified.
+          <strong className="font-semibold">Análisis parcial.</strong> Al menos una fuente primaria
+          no respondió, así que este resultado cubre menos verificaciones que un tamizaje completo.
+          Revisa <em>Estado de fuentes</em> y <em>No verificado</em> antes de concluir.
         </p>
       ) : null}
     </Panel>

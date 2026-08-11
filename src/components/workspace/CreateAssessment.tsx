@@ -50,7 +50,9 @@ export default function CreateAssessment({
     if (!file) return;
     setError(null);
     if (file.size > MAX_FILE_BYTES) {
-      setError(`That file is ${(file.size / 1024 / 1024).toFixed(1)} MB. The limit is 12 MB; simplify the polygon before uploading.`);
+      setError(
+        `El archivo pesa ${(file.size / 1024 / 1024).toFixed(1)} MB y el límite es 12 MB. Simplifica el polígono antes de subirlo.`,
+      );
       return;
     }
     const extension = file.name.toLowerCase().split(".").pop();
@@ -82,13 +84,13 @@ export default function CreateAssessment({
         detail?: string;
       };
       if (!response.ok || !payload.project) {
-        setError([payload.error, payload.detail].filter(Boolean).join(" ") || "The project could not be created.");
+        setError([payload.error, payload.detail].filter(Boolean).join(" ") || "No se pudo crear el proyecto.");
         return;
       }
       track("assessment_started", { mode });
       onProjectReady(payload.project, payload.warnings ?? []);
     } catch (caught) {
-      setError(caught instanceof Error ? caught.message : "Network error.");
+      setError(caught instanceof Error ? caught.message : "Error de red.");
     } finally {
       setSubmitting(false);
     }
@@ -117,12 +119,12 @@ export default function CreateAssessment({
   function submit(event: React.FormEvent) {
     event.preventDefault();
     if (!name.trim()) {
-      setError("Give the project a name so the dossier can be identified later.");
+      setError("Ponle un nombre al proyecto para poder identificar el dossier después.");
       return;
     }
     if (mode === "file") {
       if (!fileText && !fileBase64) {
-        setError("Upload a .geojson, .kml or .kmz file that contains the area of interest.");
+        setError("Sube un archivo .geojson, .kml o .kmz que contenga el área de interés.");
         return;
       }
       void createProject({
@@ -137,7 +139,7 @@ export default function CreateAssessment({
     const lon = Number.parseFloat(longitude);
     const radiusMeters = Number.parseFloat(radius);
     if (!Number.isFinite(lat) || !Number.isFinite(lon) || !Number.isFinite(radiusMeters)) {
-      setError("Latitude, longitude and radius must all be numbers in decimal degrees and metres.");
+      setError("Latitud, longitud y radio deben ser números, en grados decimales y metros.");
       return;
     }
     void createProject({ name, latitude: lat, longitude: lon, radiusMeters });
@@ -149,17 +151,17 @@ export default function CreateAssessment({
     <div className="mx-auto w-full max-w-3xl space-y-5">
       <Panel className="p-6">
         <PanelHeader
-          title="Create assessment"
-          subtitle="Define the area you want to screen. The geometry is validated and fingerprinted, so the same polygon always produces the same result."
+          title="Nuevo análisis"
+          subtitle="Define el área que quieres tamizar. La geometría se valida y se le calcula una huella, así que el mismo polígono siempre produce el mismo resultado."
         />
 
         <form onSubmit={submit} className="mt-6 space-y-5">
           <label className="block text-xs font-semibold text-gray-400">
-            Project name
+            Nombre del proyecto
             <input
               value={name}
               onChange={(event) => setName(event.target.value)}
-              placeholder="e.g. Inambari block — option screening"
+              placeholder="ej. Bloque Inambari — tamizaje de opción"
               className="mt-1.5 w-full rounded-lg border border-white/10 bg-white/5 px-3 py-2.5 text-sm text-gray-100 outline-none transition focus:border-blue-500"
             />
           </label>
@@ -167,8 +169,8 @@ export default function CreateAssessment({
           <div className="flex gap-2">
             {(
               [
-                { id: "file" as const, label: "Upload KMZ / KML / GeoJSON", icon: Upload },
-                { id: "coordinates" as const, label: "Centre point + radius", icon: MapPin },
+                { id: "file" as const, label: "Subir KMZ / KML / GeoJSON", icon: Upload },
+                { id: "coordinates" as const, label: "Punto central + radio", icon: MapPin },
               ]
             ).map((option) => {
               const Icon = option.icon;
@@ -200,10 +202,10 @@ export default function CreateAssessment({
               >
                 <Upload className="h-5 w-5 text-blue-400" />
                 <span className="text-sm font-semibold text-gray-200">
-                  {fileName ?? "Choose a .geojson, .json, .kml or .kmz file"}
+                  {fileName ?? "Elige un archivo .geojson, .json, .kml o .kmz"}
                 </span>
                 <span className="text-[11px] text-gray-500">
-                  Polygons and multipolygons in WGS84 decimal degrees. Points and paths are rejected.
+                  Polígonos y multipolígonos en WGS84 grados decimales. Se rechazan puntos y líneas.
                 </span>
               </button>
               <input
@@ -217,7 +219,7 @@ export default function CreateAssessment({
           ) : (
             <div className="grid gap-3 sm:grid-cols-3">
               <label className="text-xs font-semibold text-gray-400">
-                Latitude
+                Latitud
                 <input
                   value={latitude}
                   onChange={(event) => setLatitude(event.target.value)}
@@ -227,7 +229,7 @@ export default function CreateAssessment({
                 />
               </label>
               <label className="text-xs font-semibold text-gray-400">
-                Longitude
+                Longitud
                 <input
                   value={longitude}
                   onChange={(event) => setLongitude(event.target.value)}
@@ -237,7 +239,7 @@ export default function CreateAssessment({
                 />
               </label>
               <label className="text-xs font-semibold text-gray-400">
-                Radius (m)
+                Radio (m)
                 <input
                   value={radius}
                   onChange={(event) => setRadius(event.target.value)}
@@ -246,8 +248,8 @@ export default function CreateAssessment({
                 />
               </label>
               <p className="sm:col-span-3 text-[11px] leading-relaxed text-gray-500">
-                This generates a bounding box around the point. It is an approximation for screening,
-                not a surveyed boundary, and the dossier says so.
+                Genera un cuadro delimitador alrededor del punto. Es una aproximación para tamizaje, no un
+                límite levantado en campo, y el dossier lo declara así.
               </p>
             </div>
           )}
@@ -267,8 +269,8 @@ export default function CreateAssessment({
                   Demo para inversionistas
                 </p>
                 <p className="mt-1 text-[11px] leading-relaxed text-gray-400">
-                  Precarga un KML de ejemplo para mostrar el flujo de concesion minera, mapa de
-                  evidencia, radar y dossier sin preparar un archivo externo.
+                  Precarga un KML de ejemplo para recorrer el flujo completo —concesión, mapa de evidencia,
+                  radar y dossier— sin preparar un archivo propio.
                 </p>
               </div>
               <div className="flex shrink-0 flex-wrap gap-2">

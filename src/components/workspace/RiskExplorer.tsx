@@ -45,41 +45,41 @@ export default function RiskExplorer({
 
       <div className="grid gap-4 md:grid-cols-2">
         <ScoreTile
-          label="Overall screening risk"
+          label="Riesgo general del tamizaje"
           value={assessment.overallRisk}
           level={assessment.riskLevel}
           tone="risk"
-          caption="Weighted across the dimensions that could be evaluated. Every point traces back to a factor and its evidence."
+          caption="Ponderado sobre las dimensiones que sí pudieron evaluarse. Cada punto se rastrea hasta un factor y su evidencia."
         />
         <ScoreTile
-          label="Data confidence"
+          label="Confianza del dato"
           value={assessment.confidence}
           level={assessment.confidenceLevel}
           tone="confidence"
-          caption="Completeness, freshness and authority of the evidence — deliberately separate from risk, so a high score with thin data cannot read as certainty."
+          caption="Completitud, frescura y autoridad de la evidencia. Va aparte del riesgo a propósito: un puntaje alto con datos pobres no puede leerse como certeza."
         />
       </div>
 
       {assessment.riskLevel === "NOT_ASSESSED" ? (
         <p className="rounded-lg border border-red-500/40 bg-red-500/10 px-4 py-3 text-xs leading-relaxed text-red-200">
-          <strong className="font-semibold">No risk was calculated.</strong> Not a single dimension
-          could be evaluated with the sources available to this assessment, so there is no score —
-          only an absence of measurement. Configure the official connectors, or resolve the gaps
-          listed under &ldquo;What we could not verify&rdquo;, and run it again.
+          <strong className="font-semibold">No se calculó ningún riesgo.</strong> Ninguna dimensión
+          pudo evaluarse con las fuentes disponibles, así que no hay puntaje — solo ausencia de
+          medición. Esto NO significa riesgo bajo. Configura los conectores oficiales, o resuelve
+          los vacíos listados en &ldquo;No verificado&rdquo;, y vuelve a ejecutar.
         </p>
       ) : null}
 
       {assessment.riskLevel !== "NOT_ASSESSED" && assessment.confidenceLevel === "LOW" ? (
         <p className="rounded-lg border border-red-500/30 bg-red-500/10 px-4 py-3 text-xs leading-relaxed text-red-200">
-          Data confidence is low. Treat the risk number as a provisional signal only, and resolve the
-          gaps listed under &ldquo;What we could not verify&rdquo; before it informs any decision.
+          La confianza del dato es baja. Toma el número de riesgo solo como señal provisional y resuelve
+          los vacíos listados en &ldquo;No verificado&rdquo; antes de que influya en cualquier decisión.
         </p>
       ) : null}
 
       <Panel className="p-5" demo={assessment.demoMode}>
         <PanelHeader
-          title="Risk dimensions"
-          subtitle={`Rule set ${assessment.ruleVersion}. Dimensions that could not be evaluated are excluded and their weight is redistributed, so the total stays on a 0–100 scale.`}
+          title="Dimensiones de riesgo"
+          subtitle={`Motor de reglas ${assessment.ruleVersion}. Las dimensiones que no pudieron evaluarse se excluyen y su peso se redistribuye, para que el total siga en escala 0–100.`}
         />
         <div className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
           {assessment.dimensions.map((dimension) => (
@@ -94,13 +94,13 @@ export default function RiskExplorer({
               <div className="flex items-start justify-between gap-2">
                 <h4 className="text-xs font-bold text-white">{dimension.label}</h4>
                 <span className="shrink-0 text-[10px] font-semibold text-gray-500">
-                  {Math.round(dimension.weight * 100)}% weight
+                  {Math.round(dimension.weight * 100)}% peso
                 </span>
               </div>
               {dimension.inconclusive ? (
                 <p className="mt-3 text-[11px] leading-relaxed text-gray-500">
-                  Not evaluated — no source behind this dimension could answer. It contributes 0
-                  points and lowers data confidence.
+                  No evaluada — ninguna fuente detrás de esta dimensión pudo responder. Aporta 0
+                  puntos y reduce la confianza del dato.
                 </p>
               ) : (
                 <>
@@ -116,7 +116,7 @@ export default function RiskExplorer({
                     />
                   </div>
                   <p className="mt-2 text-[11px] font-semibold text-blue-300">
-                    +{dimension.contribution} points to the overall score
+                    +{dimension.contribution} puntos al puntaje total
                   </p>
                 </>
               )}
@@ -127,13 +127,14 @@ export default function RiskExplorer({
 
       <Panel className="p-5" demo={assessment.demoMode}>
         <PanelHeader
-          title="Top red flags"
-          subtitle="The factors contributing the most points, each with the evidence behind it."
+          title="Principales señales de alerta"
+          subtitle="Los factores que más puntos aportan al total, cada uno con la evidencia que lo sustenta."
         />
         {redFlags.length === 0 ? (
           <p className="mt-4 rounded-lg border border-dashed border-white/15 px-4 py-6 text-center text-xs text-gray-500">
-            No factor produced a positive contribution. Either the area is clean against the checks
-            that ran, or too few checks could run — compare against data confidence above.
+            Ningún factor produjo una contribución positiva. O el área está limpia según las
+            verificaciones que corrieron, o corrieron muy pocas — contrasta con la confianza del dato
+            de arriba.
           </p>
         ) : (
           <ul className="mt-4 space-y-3">
@@ -148,8 +149,8 @@ export default function RiskExplorer({
 
       <Panel className="p-5" demo={assessment.demoMode}>
         <PanelHeader
-          title="All factors"
-          subtitle="Factor → score → contribution → evidence. Inconclusive factors are listed too, never hidden."
+          title="Todos los factores"
+          subtitle="Factor → score → contribución → evidencia. Los factores inconclusos también se listan; nunca se ocultan."
         />
         <ul className="mt-4 space-y-2.5">
           {assessment.factors.map((factor) => (
@@ -161,20 +162,20 @@ export default function RiskExplorer({
       </Panel>
 
       <Panel className="p-5">
-        <PanelHeader title="Scope & geometry" subtitle="What exactly was screened." />
+        <PanelHeader title="Alcance y geometría" subtitle="Qué se tamizó exactamente." />
         <dl className="mt-4 grid gap-3 text-xs sm:grid-cols-2 lg:grid-cols-4">
-          <Detail label="Area" value={formatHectares(assessment.geometrySummary.areaHectares)} />
-          <Detail label="Vertices" value={String(assessment.geometrySummary.vertexCount)} />
-          <Detail label="Input format" value={assessment.geometrySummary.format.toUpperCase()} />
-          <Detail label="Geometry hash" value={assessment.geometrySummary.geometryHash} mono />
+          <Detail label="Área" value={formatHectares(assessment.geometrySummary.areaHectares)} />
+          <Detail label="Vértices" value={String(assessment.geometrySummary.vertexCount)} />
+          <Detail label="Formato de origen" value={assessment.geometrySummary.format.toUpperCase()} />
+          <Detail label="Huella de geometría" value={assessment.geometrySummary.geometryHash} mono />
           <Detail
-            label="Centroid"
+            label="Centroide"
             value={`${assessment.geometrySummary.centroid[1]}, ${assessment.geometrySummary.centroid[0]}`}
             mono
           />
-          <Detail label="Assessment ID" value={assessment.id} mono />
-          <Detail label="Rule version" value={assessment.ruleVersion} mono />
-          <Detail label="Run at" value={formatTimestamp(assessment.createdAt)} />
+          <Detail label="ID de evaluación" value={assessment.id} mono />
+          <Detail label="Versión de reglas" value={assessment.ruleVersion} mono />
+          <Detail label="Ejecutado" value={formatTimestamp(assessment.createdAt)} />
         </dl>
       </Panel>
 

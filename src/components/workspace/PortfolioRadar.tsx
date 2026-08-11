@@ -5,9 +5,11 @@ import type { ReactNode } from "react";
 import Link from "next/link";
 import { AlertTriangle, CheckCircle2, FileText, LandPlot, Radar, TrendingUp } from "lucide-react";
 
-import type { Assessment } from "@/types/assessment";
+import type { Assessment, Project } from "@/types/assessment";
+import type { Evidence } from "@/types/evidence";
 import { EmptyState, Meter, Panel, PanelHeader } from "@/components/ui/Primitives";
 import { formatTimestamp, opportunityScore, RISK_STYLES, topFactors } from "@/lib/ui/format";
+import MapPanel from "./MapPanel";
 
 type Summary = Pick<
   Assessment,
@@ -31,7 +33,17 @@ type Summary = Pick<
  * assets that deserve more attention when low preliminary risk is supported by
  * enough data confidence, and it states what blocked a stronger conclusion.
  */
-export default function PortfolioRadar({ currentAssessment }: { currentAssessment?: Assessment }) {
+export default function PortfolioRadar({
+  currentAssessment,
+  project,
+  onSelectEvidence,
+}: {
+  currentAssessment?: Assessment;
+  /** Supplied so the radar can draw the area in its territorial context
+   *  instead of sending the operator to another tab to see where it is. */
+  project?: Project;
+  onSelectEvidence?: (evidence: Evidence) => void;
+}) {
   const [rows, setRows] = useState<Summary[] | null>(null);
   const [failed, setFailed] = useState(false);
 
@@ -64,8 +76,118 @@ export default function PortfolioRadar({ currentAssessment }: { currentAssessmen
       .sort((a, b) => b.score - a.score);
   }, [currentAssessment, rows]);
 
+  // Concession-level context, computed from the evidence already frozen into
+  // the assessment. Nothing here re-queries a source: the radar reads the same
+  // record set the dossier cites, so the two can never disagree.
+  const territorial = useMemo(() => {
+    if (!currentAssessment) return null;
+    const findings = currentAssessment.evidence.filter((entry) => entry.kind === "finding");
+    const rights = findings.filter((entry) => entry.sourceKey === "ingemmet");
+    const protectedAreas = findings.filter((entry) => entry.sourceKey === "sernanp");
+
+    const overlapPercent = rights.reduce((total, entry) => {
+      const value = entry.metadata?.overlapPercentOfAoi;
+      return total + (typeof value === "number" ? value : 0);
+    }, 0);
+
+    const holders = [
+      ...new Set(
+        rights
+          .map((entry) => entry.metadata?.holder)
+          .filter((value): value is string => typeof value === "string" && value.trim().length > 0),
+      ),
+    ];
+
+    return {
+      rights,
+      protectedAreas,
+      overlapPercent: Math.min(100, Math.round(overlapPercent * 100) / 100),
+      freePercent: Math.max(0, Math.round((100 - overlapPercent) * 100) / 100),
+      holders,
+    };
+  }, [currentAssessment]);
+
   return (
     <div className="space-y-5">
+      {currentAssessment && project && territorial ? (
+        <Panel className="p-5">
+          <PanelHeader
+            title="Contexto territorial del área"
+            subtitle="Dónde cae tu área respecto del catastro que la rodea. Cada geometría dibujada es un registro oficial congelado como evidencia; haz clic para abrir el que la respalda."
+          />
+
+          <div className="mt-4 grid gap-4 lg:grid-cols-[minmax(0,1.35fr)_minmax(0,1fr)]">
+            <div className="h-[420px] overflow-hidden rounded-xl border border-white/10">
+              <MapPanel
+                aoi={project.geometry}
+                evidence={currentAssessment.evidence}
+                sources={currentAssessment.sourceStatus}
+                center={currentAssessment.geometrySummary.centroid}
+                onSelectEvidence={(item) => onSelectEvidence?.(item)}
+              />
+            </div>
+
+            <div className="space-y-3">
+              <div className="grid grid-cols-2 gap-3">
+                <ContextStat
+                  label="Superposición con derechos"
+                  value={`${territorial.overlapPercent}%`}
+                  hint={
+                    territorial.overlapPercent > 0
+                      ? "Porcentaje del área ya cubierto por concesiones registradas."
+                      : "Ninguna concesión registrada se superpone al área evaluada."
+                  }
+                  tone={territorial.overlapPercent > 50 ? "warn" : "neutral"}
+                />
+                <ContextStat
+                  label="Superficie libre"
+                  value={`${territorial.freePercent}%`}
+                  hint="Parte del área sin superposición catastral detectada en las capas consultadas."
+                  tone={territorial.freePercent > 50 ? "good" : "neutral"}
+                />
+                <ContextStat
+                  label="Derechos mineros"
+                  value={String(territorial.rights.length)}
+                  hint="Registros del catastro minero que intersectan el área."
+                  tone="neutral"
+                />
+                <ContextStat
+                  label="Áreas protegidas"
+                  value={String(territorial.protectedAreas.length)}
+                  hint="Registros de áreas naturales protegidas que intersectan el área."
+                  tone={territorial.protectedAreas.length > 0 ? "warn" : "good"}
+                />
+              </div>
+
+              {territorial.holders.length > 0 ? (
+                <div className="rounded-xl border border-white/10 bg-white/[0.03] p-3">
+                  <p className="text-[10px] font-semibold uppercase tracking-wider text-gray-500">
+                    Titulares en el entorno
+                  </p>
+                  <ul className="mt-2 space-y-1">
+                    {territorial.holders.slice(0, 6).map((holder) => (
+                      <li key={holder} className="truncate text-[11px] text-gray-300">
+                        • {holder}
+                      </li>
+                    ))}
+                  </ul>
+                  <p className="mt-2 text-[10px] leading-relaxed text-gray-600">
+                    Tal como los publica el catastro. Verifica la vigencia en el portal oficial antes
+                    de contactar a un titular.
+                  </p>
+                </div>
+              ) : null}
+
+              <p className="rounded-xl border border-blue-500/20 bg-blue-500/[0.06] p-3 text-[11px] leading-relaxed text-blue-100/80">
+                Esta lectura es de triaje comercial, no una opinión legal. Responde si el bloque está
+                rodeado, cuánto espacio queda y quién es titular al lado — no si el activo es
+                legalmente viable.
+              </p>
+            </div>
+          </div>
+        </Panel>
+      ) : null}
+
       {currentAssessment ? <CurrentRadar assessment={currentAssessment} /> : null}
 
       <Panel className="p-5">
@@ -435,4 +557,32 @@ function opportunityVerdict(score: number): string {
   if (score >= 55) return "Interes medio: avanzar si las brechas abiertas son cerrables.";
   if (score >= 35) return "Interes condicionado: requiere mas evidencia antes de promoverlo.";
   return "Bajo interes por ahora: el riesgo o la baja confianza pesan mas que la oportunidad.";
+}
+
+/** Compact figure with the sentence that says how to read it. */
+function ContextStat({
+  label,
+  value,
+  hint,
+  tone,
+}: {
+  label: string;
+  value: string;
+  hint: string;
+  tone: "good" | "warn" | "neutral";
+}) {
+  const toneClass =
+    tone === "good"
+      ? "text-emerald-300"
+      : tone === "warn"
+        ? "text-amber-300"
+        : "text-gray-100";
+
+  return (
+    <div className="rounded-xl border border-white/10 bg-white/[0.03] p-3">
+      <p className="text-[10px] font-semibold uppercase tracking-wider text-gray-500">{label}</p>
+      <p className={`mt-1 font-mono text-xl font-semibold tabular-nums ${toneClass}`}>{value}</p>
+      <p className="mt-1 text-[10px] leading-snug text-gray-500">{hint}</p>
+    </div>
+  );
 }

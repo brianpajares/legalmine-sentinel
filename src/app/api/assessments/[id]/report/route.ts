@@ -1,20 +1,21 @@
 import { getStore, type SavedDossier } from "@/lib/store";
 import { dossierFilename, renderDossierHtml } from "@/lib/dossier/render";
+import { renderAssessmentWorkbook, workbookFilename } from "@/lib/dossier/workbook";
 import { notFound, ok, serverError } from "@/lib/api/respond";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
-// Rendering a KB-scale HTML + Drive upload is under a second on warm paths;
-// this ceiling exists so a cold-boot Drive round-trip does not truncate.
-export const maxDuration = 30;
+// Rendering plus two Drive round-trips is well under a second on warm paths;
+// this ceiling exists so a cold-boot upload is not truncated mid-flight.
+export const maxDuration = 45;
 
 /**
- * Records that a dossier was produced and, when the backing store supports it,
- * archives a self-contained copy alongside the assessment record.
+ * Records that a dossier was produced and archives it to the backing store.
  *
- * The metric is always recorded even if the upload fails, because the metric
- * measures real usage, not the durability of a downstream. The response carries
- * the Drive link when one exists so the UI can offer it to the customer.
+ * Two artefacts are written when the store supports files: the narrative
+ * dossier, and the spreadsheet operators actually work on afterwards. Neither
+ * upload may block the metric — that measures real usage, not the health of a
+ * downstream — so failures are captured and reported rather than thrown.
  */
 export async function POST(_request: Request, context: { params: Promise<{ id: string }> }) {
   try {
@@ -26,26 +27,42 @@ export async function POST(_request: Request, context: { params: Promise<{ id: s
     await store.recordReportGenerated(id);
 
     let dossier: SavedDossier | null = null;
+    let workbook: SavedDossier | null = null;
     let dossierError: string | null = null;
 
-    if (store.saveDossierFile) {
-      try {
-        const project = await store.getProject(assessment.projectId);
-        const projectName = project?.name ?? assessment.projectName;
-        const html = renderDossierHtml({
-          assessment,
-          projectName,
-          projectCountry: project?.country,
-        });
-        dossier = await store.saveDossierFile({
-          assessmentId: id,
-          fileName: dossierFilename(assessment, projectName),
-          html,
-        });
-      } catch (error) {
-        // Never block the metric on an upload failure. Report the reason so the
-        // UI can be honest — "Saved locally; upload retried on the next print."
-        dossierError = error instanceof Error ? error.message : "Unknown error saving to Drive.";
+    if (store.saveDossierFile || store.saveDataWorkbook) {
+      const project = await store.getProject(assessment.projectId);
+      const projectName = project?.name ?? assessment.projectName;
+
+      if (store.saveDossierFile) {
+        try {
+          dossier = await store.saveDossierFile({
+            assessmentId: id,
+            fileName: dossierFilename(assessment, projectName),
+            html: renderDossierHtml({
+              assessment,
+              projectName,
+              projectCountry: project?.country,
+            }),
+          });
+        } catch (error) {
+          dossierError = error instanceof Error ? error.message : "Unknown error saving to Drive.";
+        }
+      }
+
+      if (store.saveDataWorkbook) {
+        try {
+          workbook = await store.saveDataWorkbook({
+            assessmentId: id,
+            fileName: workbookFilename(assessment, projectName),
+            xml: renderAssessmentWorkbook(assessment, projectName, project?.country ?? "PE"),
+          });
+        } catch (error) {
+          // Keep the first failure if the dossier already failed: it is the one
+          // the operator cares about most.
+          dossierError ??=
+            error instanceof Error ? error.message : "Unknown error saving the workbook.";
+        }
       }
     }
 
@@ -54,6 +71,7 @@ export async function POST(_request: Request, context: { params: Promise<{ id: s
       assessmentId: id,
       storage: store.kind,
       dossier,
+      workbook,
       dossierError,
     });
   } catch (error) {

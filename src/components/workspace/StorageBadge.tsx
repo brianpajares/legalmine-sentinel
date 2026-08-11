@@ -3,15 +3,16 @@
 import { useEffect, useState } from "react";
 import { CheckCircle2, CloudOff, ExternalLink, HardDriveDownload, Loader2 } from "lucide-react";
 
+import type { WorkspaceCopy } from "@/lib/i18n/workspace";
+
 /**
  * Storage badge.
  *
- * The customer never has to open dev tools to know where their evaluations are
- * being kept. When Drive is wired up correctly the badge is green and links to
- * the folder in their account; when it is not, it says so plainly. The point is
- * that nothing about persistence is a surprise: if a screening is running
- * against an in-memory store, the badge says the state will not survive a
- * restart before an investor demo goes off the rails.
+ * The operator never has to open dev tools to know where their evaluations are
+ * being kept. Green links to the folder in their own Drive; amber says plainly
+ * that the state will not survive a restart. A screening running against
+ * ephemeral storage announces itself before an investor demo goes off the rails
+ * — which is exactly the failure this badge was added to catch.
  */
 
 interface DriveProbe {
@@ -22,14 +23,14 @@ interface DriveProbe {
   error: string | null;
 }
 
-export default function StorageBadge() {
+export default function StorageBadge({ copy }: { copy: WorkspaceCopy }) {
   const [probe, setProbe] = useState<DriveProbe | "loading" | "error">("loading");
 
   useEffect(() => {
     let mounted = true;
     fetch("/api/health/drive", { cache: "no-store" })
-      .then((response) => response.json().then((json) => ({ status: response.status, json })))
-      .then(({ json }) => {
+      .then((response) => response.json())
+      .then((json) => {
         if (mounted) setProbe(json as DriveProbe);
       })
       .catch(() => {
@@ -40,20 +41,23 @@ export default function StorageBadge() {
     };
   }, []);
 
+  const shell =
+    "flex items-center gap-2 rounded-lg border px-3 py-1.5 text-[11px] font-medium transition";
+
   if (probe === "loading") {
     return (
-      <div className="flex items-center gap-2 rounded-lg border border-white/10 bg-white/[0.03] px-3 py-1.5 text-[11px] text-gray-400">
+      <div className={`${shell} border-white/10 bg-white/[0.03] text-gray-400`}>
         <Loader2 className="h-3 w-3 animate-spin" />
-        Verificando almacenamiento…
+        {copy.storage.checking}
       </div>
     );
   }
 
   if (probe === "error") {
     return (
-      <div className="flex items-center gap-2 rounded-lg border border-white/10 bg-white/[0.03] px-3 py-1.5 text-[11px] text-gray-400">
+      <div className={`${shell} border-white/10 bg-white/[0.03] text-gray-400`}>
         <CloudOff className="h-3 w-3" />
-        Almacenamiento no confirmado
+        {copy.storage.unconfirmed}
       </div>
     );
   }
@@ -61,11 +65,11 @@ export default function StorageBadge() {
   if (!probe.configured) {
     return (
       <div
-        className="flex items-center gap-2 rounded-lg border border-amber-400/40 bg-amber-500/10 px-3 py-1.5 text-[11px] font-medium text-amber-100"
-        title="Configura las variables GOOGLE_DRIVE_* para archivar las evaluaciones."
+        className={`${shell} border-amber-400/40 bg-amber-500/10 text-amber-100`}
+        title={copy.storage.ephemeralHint}
       >
-        <CloudOff className="h-3 w-3" />
-        Memoria efímera — se pierde al reiniciar
+        <CloudOff className="h-3 w-3 flex-none" />
+        {copy.storage.ephemeral}
       </div>
     );
   }
@@ -73,11 +77,11 @@ export default function StorageBadge() {
   if (!probe.ok) {
     return (
       <div
-        className="flex max-w-md items-center gap-2 rounded-lg border border-amber-400/40 bg-amber-500/10 px-3 py-1.5 text-[11px] font-medium text-amber-100"
+        className={`${shell} max-w-md border-amber-400/40 bg-amber-500/10 text-amber-100`}
         title={probe.error ?? undefined}
       >
         <CloudOff className="h-3 w-3 flex-none" />
-        <span className="truncate">Drive configurado pero no responde</span>
+        <span className="truncate">{copy.storage.driveDown}</span>
       </div>
     );
   }
@@ -87,11 +91,11 @@ export default function StorageBadge() {
       href={probe.folder?.webViewLink ?? "#"}
       target="_blank"
       rel="noopener noreferrer"
-      className="group flex items-center gap-2 rounded-lg border border-emerald-500/40 bg-emerald-500/10 px-3 py-1.5 text-[11px] font-medium text-emerald-100 transition hover:bg-emerald-500/15"
-      title={`Carpeta "${probe.folder?.name ?? "LegalMine data"}" en tu Google Drive`}
+      className={`${shell} group border-emerald-500/40 bg-emerald-500/10 text-emerald-100 hover:bg-emerald-500/15`}
+      title={copy.storage.driveOkHint}
     >
       <CheckCircle2 className="h-3 w-3 flex-none" />
-      Guardando en tu Google Drive
+      {copy.storage.driveOk}
       <HardDriveDownload className="h-3 w-3 flex-none opacity-60" />
       <ExternalLink className="h-3 w-3 flex-none opacity-0 transition group-hover:opacity-70" />
     </a>

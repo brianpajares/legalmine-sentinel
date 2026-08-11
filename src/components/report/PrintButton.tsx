@@ -1,18 +1,21 @@
 "use client";
 
 import { useState } from "react";
-import { CheckCircle2, ExternalLink, Loader2, Printer } from "lucide-react";
+import { CheckCircle2, ExternalLink, Loader2, Printer, Table2 } from "lucide-react";
 
 import { track } from "@/lib/analytics/client";
+
+interface SavedFile {
+  fileId: string;
+  webViewLink: string;
+  fileName: string;
+}
 
 interface ReportResponse {
   recorded: boolean;
   storage?: "memory" | "supabase" | "drive";
-  dossier?: {
-    fileId: string;
-    webViewLink: string;
-    fileName: string;
-  } | null;
+  dossier?: SavedFile | null;
+  workbook?: SavedFile | null;
   dossierError?: string | null;
 }
 
@@ -27,6 +30,7 @@ interface ReportResponse {
 export default function PrintButton({ assessmentId }: { assessmentId: string }) {
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState<{ link: string; name: string } | null>(null);
+  const [workbook, setWorkbook] = useState<{ link: string; name: string } | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   async function handleClick() {
@@ -44,7 +48,11 @@ export default function PrintButton({ assessmentId }: { assessmentId: string }) 
       if (payload?.dossier) {
         setSaved({ link: payload.dossier.webViewLink, name: payload.dossier.fileName });
         track("report_saved_to_drive", { assessment_id: assessmentId });
-      } else if (payload?.dossierError) {
+      }
+      if (payload?.workbook) {
+        setWorkbook({ link: payload.workbook.webViewLink, name: payload.workbook.fileName });
+      }
+      if (!payload?.dossier && payload?.dossierError) {
         setError(payload.dossierError);
       }
     } catch (caught) {
@@ -71,11 +79,25 @@ export default function PrintButton({ assessmentId }: { assessmentId: string }) 
           href={saved.link}
           target="_blank"
           rel="noopener noreferrer"
-          className="inline-flex max-w-[220px] items-center gap-1.5 truncate rounded-md border border-emerald-500/40 bg-emerald-500/10 px-2 py-1 text-[11px] font-medium text-emerald-200 transition hover:bg-emerald-500/15 print:hidden"
+          className="inline-flex max-w-[240px] items-center gap-1.5 truncate rounded-md border border-emerald-500/40 bg-emerald-500/10 px-2 py-1 text-[11px] font-medium text-emerald-200 transition hover:bg-emerald-500/15 print:hidden"
           title={`Abrir "${saved.name}" en Google Drive`}
         >
           <CheckCircle2 className="h-3 w-3 flex-none" />
-          <span className="truncate">Guardado en tu Drive</span>
+          <span className="truncate">Dossier guardado en tu Drive</span>
+          <ExternalLink className="h-3 w-3 flex-none" />
+        </a>
+      ) : null}
+
+      {workbook ? (
+        <a
+          href={workbook.link}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="inline-flex max-w-[240px] items-center gap-1.5 truncate rounded-md border border-emerald-500/40 bg-emerald-500/10 px-2 py-1 text-[11px] font-medium text-emerald-200 transition hover:bg-emerald-500/15 print:hidden"
+          title={`Abrir "${workbook.name}" — datos en hoja de cálculo`}
+        >
+          <Table2 className="h-3 w-3 flex-none" />
+          <span className="truncate">Datos en Excel</span>
           <ExternalLink className="h-3 w-3 flex-none" />
         </a>
       ) : null}

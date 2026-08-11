@@ -36,7 +36,7 @@ export default function EvidenceDrawer({
     <div className="fixed inset-0 z-50 flex justify-end print:hidden">
       <button
         type="button"
-        aria-label="Close evidence drawer"
+        aria-label="Cerrar panel de evidencia"
         onClick={onClose}
         className="absolute inset-0 bg-black/60 backdrop-blur-sm"
       />
@@ -83,10 +83,10 @@ export default function EvidenceDrawer({
                 ) : null}
 
                 <dl className="mt-3 space-y-1 border-t border-white/5 pt-3 text-[11px]">
-                  <Row label="Queried at" value={formatTimestamp(item.fetchedAt)} />
-                  {item.validAt ? <Row label="Source validity" value={formatTimestamp(item.validAt)} /> : null}
-                  {item.observedAt ? <Row label="Observed at" value={formatTimestamp(item.observedAt)} /> : null}
-                  <Row label="Evidence ID" value={item.id} mono />
+                  <Row label="Consultado" value={formatTimestamp(item.fetchedAt)} />
+                  {item.validAt ? <Row label="Vigencia de la fuente" value={formatTimestamp(item.validAt)} /> : null}
+                  {item.observedAt ? <Row label="Observado" value={formatTimestamp(item.observedAt)} /> : null}
+                  <Row label="ID de evidencia" value={item.id} mono />
                 </dl>
 
                 {Array.isArray(item.metadata.warnings) && (item.metadata.warnings as string[]).length > 0 ? (

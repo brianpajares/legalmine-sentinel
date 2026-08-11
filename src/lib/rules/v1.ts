@@ -30,34 +30,34 @@ export interface DimensionDefinition {
 export const DIMENSIONS: DimensionDefinition[] = [
   {
     key: "legal_tenure",
-    label: "Legal & tenure",
+    label: "Legal y tenencia",
     weight: 0.3,
     description:
       "Existing mining rights over the area, their published status, and registration checks that remain open.",
   },
   {
     key: "environmental",
-    label: "Environmental restrictions",
+    label: "Restricciones ambientales",
     weight: 0.25,
     description:
       "Overlap with officially designated protected areas and the severity implied by their management category.",
   },
   {
     key: "territorial",
-    label: "Territorial & social context",
+    label: "Contexto territorial y social",
     weight: 0.2,
     description:
       "Proximity to officially recorded communities and territorial boundaries. Context for engagement planning, not a social score.",
   },
   {
     key: "water_physical",
-    label: "Water & physical constraints",
+    label: "Restricciones hídricas y físicas",
     weight: 0.1,
     description: "Water bodies and hydrological management boundaries published by the water authority.",
   },
   {
     key: "remote_sensing",
-    label: "Remote-sensing change",
+    label: "Cambio por sensores remotos",
     weight: 0.15,
     description:
       "Quantified land-cover change over the area of interest. An indicator that warrants inspection, never proof of an activity.",
@@ -161,7 +161,7 @@ const RIGHTS_ENCUMBRANCE: Rule = {
   id: "LEG-RIGHT-01",
   factorKey: "mining_rights_encumbrance",
   dimension: "legal_tenure",
-  label: "Existing mining rights over the area",
+  label: "Derechos mineros existentes sobre el área",
   weight: 0.45,
   requiredSource: "ingemmet",
   evaluate(bundle) {
@@ -169,7 +169,7 @@ const RIGHTS_ENCUMBRANCE: Rule = {
     if (!isConclusive(source.status)) {
       return unavailable(bundle, "ingemmet", source.status, {
         key: "mining_rights_encumbrance",
-        label: "Mining rights coverage",
+        label: "Cobertura de derechos mineros",
         reason: `The mining cadastre returned ${source.status.replace(/_/g, " ").toLowerCase()}, so the share of the area already covered by third-party rights is unknown.`,
         blockedConclusion:
           "No statement can be made about whether the area is free, partially encumbered, or fully covered by existing mining rights.",
@@ -212,7 +212,7 @@ const RIGHTS_STATUS: Rule = {
   id: "LEG-STATUS-01",
   factorKey: "rights_status_complexity",
   dimension: "legal_tenure",
-  label: "Status of overlapping rights",
+  label: "Estado de los derechos superpuestos",
   weight: 0.35,
   requiredSource: "ingemmet",
   evaluate(bundle) {
@@ -220,7 +220,7 @@ const RIGHTS_STATUS: Rule = {
     if (!isConclusive(source.status)) {
       return unavailable(bundle, "ingemmet", source.status, {
         key: "rights_status_complexity",
-        label: "Status of overlapping rights",
+        label: "Estado de los derechos superpuestos",
         reason: `The mining cadastre returned ${source.status.replace(/_/g, " ").toLowerCase()}, so the published status of overlapping rights could not be read.`,
         blockedConclusion: "No statement can be made about the legal status of rights over this area.",
         suggestedAction: "Retrieve the status of each overlapping right from the official cadastre or file.",
@@ -260,7 +260,7 @@ const REINFO_CHECK: Rule = {
   id: "LEG-REINFO-01",
   factorKey: "reinfo_registration_check",
   dimension: "legal_tenure",
-  label: "REINFO registration verification",
+  label: "Verificación de registro REINFO",
   weight: 0.2,
   requiredSource: "reinfo",
   evaluate(bundle) {
@@ -268,7 +268,7 @@ const REINFO_CHECK: Rule = {
     if (!isConclusive(source.status)) {
       return unavailable(bundle, "reinfo", source.status, {
         key: "reinfo_registration_check",
-        label: "REINFO registration verification",
+        label: "Verificación de registro REINFO",
         reason:
           "No automated REINFO lookup was executed for this assessment. No conclusion about registration status is generated.",
         blockedConclusion:
@@ -312,7 +312,7 @@ const PROTECTED_AREA_OVERLAP: Rule = {
   id: "ENV-ANP-01",
   factorKey: "protected_area_overlap",
   dimension: "environmental",
-  label: "Protected-area overlap",
+  label: "Superposición con área protegida",
   weight: 0.7,
   requiredSource: "sernanp",
   evaluate(bundle) {
@@ -320,7 +320,7 @@ const PROTECTED_AREA_OVERLAP: Rule = {
     if (!isConclusive(source.status)) {
       return unavailable(bundle, "sernanp", source.status, {
         key: "protected_area_overlap",
-        label: "Protected-area overlap",
+        label: "Superposición con área protegida",
         reason: `The protected-area service returned ${source.status.replace(/_/g, " ").toLowerCase()}, so overlap could not be computed.`,
         blockedConclusion:
           "No statement can be made about whether the area of interest intersects a protected area.",
@@ -371,7 +371,7 @@ const PROTECTED_AREA_CATEGORY: Rule = {
   id: "ENV-CAT-01",
   factorKey: "protected_area_category",
   dimension: "environmental",
-  label: "Severity of the protected-area category",
+  label: "Severidad de la categoría del área protegida",
   weight: 0.3,
   requiredSource: "sernanp",
   evaluate(bundle) {
@@ -379,7 +379,7 @@ const PROTECTED_AREA_CATEGORY: Rule = {
     if (!isConclusive(source.status)) {
       return unavailable(bundle, "sernanp", source.status, {
         key: "protected_area_category",
-        label: "Protected-area category severity",
+        label: "Severidad de categoría del ANP",
         reason: `The protected-area service returned ${source.status.replace(/_/g, " ").toLowerCase()}, so no category could be read.`,
         blockedConclusion: "No statement can be made about the restriction level applying to this area.",
         suggestedAction: "Identify the category of any intersecting area in the official SERNANP registry.",
@@ -416,7 +416,7 @@ const TERRITORIAL_CONTEXT: Rule = {
   id: "TER-BDPI-01",
   factorKey: "territorial_context",
   dimension: "territorial",
-  label: "Officially recorded communities and territorial boundaries",
+  label: "Comunidades y límites territoriales registrados",
   weight: 1,
   requiredSource: "bdpi",
   evaluate(bundle) {
@@ -424,7 +424,7 @@ const TERRITORIAL_CONTEXT: Rule = {
     if (!isConclusive(source.status)) {
       return unavailable(bundle, "bdpi", source.status, {
         key: "territorial_context",
-        label: "Territorial context",
+        label: "Contexto territorial",
         reason:
           "No territorial-context layer produced a usable answer, so proximity to officially recorded communities was not evaluated.",
         blockedConclusion:
@@ -465,7 +465,7 @@ const WATER_CONTEXT: Rule = {
   id: "WAT-ANA-01",
   factorKey: "water_context",
   dimension: "water_physical",
-  label: "Water bodies and hydrological constraints",
+  label: "Cuerpos de agua y restricciones hidrológicas",
   weight: 1,
   requiredSource: "ana",
   evaluate(bundle) {
@@ -473,7 +473,7 @@ const WATER_CONTEXT: Rule = {
     if (!isConclusive(source.status)) {
       return unavailable(bundle, "ana", source.status, {
         key: "water_context",
-        label: "Water context",
+        label: "Contexto hídrico",
         reason:
           "No water-resources context layer produced a usable answer, so water bodies and management boundaries were not evaluated.",
         blockedConclusion:
@@ -514,7 +514,7 @@ const VEGETATION_CHANGE: Rule = {
   id: "RS-NDVI-01",
   factorKey: "vegetation_change_indicator",
   dimension: "remote_sensing",
-  label: "Vegetation-change indicator",
+  label: "Indicador de cambio de vegetación",
   weight: 1,
   requiredSource: "copernicus",
   evaluate(bundle) {
@@ -526,7 +526,7 @@ const VEGETATION_CHANGE: Rule = {
 
     return unavailable(bundle, "copernicus", isConclusive(source.status) ? "MANUAL_VERIFICATION_REQUIRED" : source.status, {
       key: "vegetation_change_indicator",
-      label: "Vegetation-change indicator",
+      label: "Indicador de cambio de vegetación",
       reason,
       blockedConclusion:
         "No land-cover change value is produced, and no inference about activity on the ground is made from imagery in this version.",
