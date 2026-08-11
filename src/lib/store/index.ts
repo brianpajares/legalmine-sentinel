@@ -23,6 +23,14 @@ export interface TractionMetrics {
   medianTimeSavedMinutes: number | null;
 }
 
+/** Handle to a dossier the store persisted next to its assessment record. */
+export interface SavedDossier {
+  fileId: string;
+  /** URL the customer can open to view the dossier as it was saved. */
+  webViewLink: string;
+  fileName: string;
+}
+
 export interface Store {
   kind: "memory" | "supabase" | "drive";
   /** True when data is lost on restart. Surfaced in /api/health. */
@@ -39,6 +47,18 @@ export interface Store {
   saveLead(lead: Lead): Promise<Lead>;
   listLeads(limit?: number): Promise<Lead[]>;
   metrics(): Promise<TractionMetrics>;
+  /**
+   * Persists a rendered dossier next to the assessment record, in the same
+   * backing account. Optional because in-memory and Supabase stores keep no
+   * files — they return `null`. The Drive store returns a link to the file in
+   * the customer's own account, which is where dossiers belong: with the
+   * evidence they cite, in an account this deployment does not own.
+   */
+  saveDossierFile?(input: {
+    assessmentId: string;
+    fileName: string;
+    html: string;
+  }): Promise<SavedDossier | null>;
 }
 
 export function median(values: number[]): number | null {
